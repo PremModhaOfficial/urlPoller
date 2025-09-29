@@ -1,35 +1,35 @@
 package com.practice.urlPoller;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.Vertx;
 
-public class MainVerticle extends VerticleBase
-{
-  static final String PATH = "urls.txt";
+public class MainVerticle extends VerticleBase {
+  static String PATH = "urls.txt";
 
-  public static void main(String[] args)
-  {
+  public static void main(String[] args) {
+
+    if (args.length > 0) {
+      PATH = args[0];
+    }
     var vertx = Vertx.vertx();
     vertx.deployVerticle(MainVerticle.class.getName());
   }
 
   @Override
-  public Future<?> start() throws IOException
-  {
+  public Future<?> start() throws IOException {
 
+    var vertical_list = new ArrayList<Future<String>>();
 
-    // TODO: add this through the cmd args
-    vertx.deployVerticle(new ConfigReaderVerticle(PATH))
-         .onSuccess(a -> Future.succeededFuture())
-         .onFailure(Throwable::printStackTrace);
+    vertical_list.add(vertx.deployVerticle(new ConfigReaderVerticle(PATH)));
+    vertical_list.add(vertx.deployVerticle(new TaskSchedulerVerticle()));
+    vertical_list.add(vertx.deployVerticle(new WritingVerticle()));
 
-    vertx.deployVerticle(new TaskSchedulerVerticle())
-         .onSuccess(a -> Future.succeededFuture())
-         .onFailure(Throwable::printStackTrace);
-
+    Future.all(vertical_list)
+        .onFailure(Throwable::printStackTrace);
 
     return Future.succeededFuture();
 

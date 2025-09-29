@@ -23,7 +23,7 @@ public class EventHandler
    */
   public EventBus publish(Event event, JsonObject message)
   {
-    System.out.printf("Event Fired %n`%s`%n`%s`%n", event.toString(), message);
+    System.out.printf("EVENT: `%s`%n`%s`%n", event.toString(), message);
     return vertx.eventBus().publish(event.toString(), message != null ? message : "");
   }
 

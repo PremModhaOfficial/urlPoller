@@ -1,0 +1,6 @@
+PING 10.20.40.10 (10.20.40.10) 56(84) bytes of data.
+64 bytes from 10.20.40.10: icmp_seq=1 ttl=64 time=4.99 ms
+
+--- 10.20.40.10 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 4.987/4.987/4.987/0.000 ms

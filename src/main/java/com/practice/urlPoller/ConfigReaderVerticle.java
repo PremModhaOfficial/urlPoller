@@ -1,6 +1,5 @@
 package com.practice.urlPoller;
 
-
 import com.practice.urlPoller.Events.Event;
 import com.practice.urlPoller.Events.EventHandler;
 
@@ -26,18 +25,20 @@ public class ConfigReaderVerticle extends VerticleBase
     // read file
     var fs = vertx.fileSystem();
 
-
     var data = Buffer.buffer();
 
     fs.readFile(file_path)
-      .onComplete(buffer -> data.appendBuffer(buffer.result()))
-      .onFailure(Throwable::printStackTrace);
+      .onComplete(buffer -> {
+        data.appendBuffer(buffer.result());
+        var json = new JsonObject().put("data", data.toString());
+        event_handler.publish(Event.CONFIG_LOADED, json);
+
+      })
+      .onFailure(Throwable::printStackTrace)
+    ;
 
     // System.out.println(data.toString());
     //
-    var json = new JsonObject().put("data", data.toString());
-    event_handler.publish(Event.CONFIG_LOADED, json);
-
 
     return Future.succeededFuture();
 
@@ -46,4 +47,3 @@ public class ConfigReaderVerticle extends VerticleBase
     // then fire event thath the config is loaded
   }
 }
-
