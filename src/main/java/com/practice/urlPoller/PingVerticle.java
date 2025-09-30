@@ -1,33 +1,30 @@
 package com.practice.urlPoller;
 
-import java.util.ArrayList;
 import java.util.Set;
 
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
-import io.vertx.core.ThreadingModel;
 import io.vertx.core.VerticleBase;
 
-public class PingVerticle extends VerticleBase {
-  private Set<Ip> ip_set;
+public class PingVerticle extends VerticleBase
+{
+  private final Set<Ip> ipSet;
 
-  public PingVerticle(Set<Ip> ip_set) {
-    this.ip_set = ip_set;
+  public PingVerticle(Set<Ip> ipSet)
+  {
+    this.ipSet = ipSet;
   }
 
   @Override
-  public Future<?> start() throws Exception {
-    var list_of_commands = new ArrayList<Object>();
+  public Future<?> start()
+  {
 
-    var iter = ip_set.iterator();
+    var iter = ipSet.iterator();
+    var executor = vertx.createSharedWorkerExecutor("Motadata-Executor", 9);
 
-    while (iter.hasNext()) {
+    while (iter.hasNext())
+    {
 
-      vertx.deployVerticle(new WorkerVerticle(new ProcessBuilder("ping", "-c", "1", iter.next().getAddress())),
-          new DeploymentOptions()
-              .setWorkerPoolName("Motadata Workers - multi")
-              // .setWorkerPoolSize(1)
-              .setThreadingModel(ThreadingModel.WORKER));
+      executor.executeBlocking(() -> Worker.work(vertx, new ProcessBuilder("ping", "-c", "1", iter.next().getAddress())));
 
     }
 

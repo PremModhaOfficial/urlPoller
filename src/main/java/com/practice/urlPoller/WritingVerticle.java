@@ -1,5 +1,10 @@
 package com.practice.urlPoller;
 
+import static com.practice.urlPoller.Constanst.JsonFilds.COMMAND;
+import static com.practice.urlPoller.Constanst.JsonFilds.DATA;
+import static com.practice.urlPoller.Constanst.JsonFilds.EXIT_CODE;
+import static com.practice.urlPoller.Constanst.JsonFilds.FILE_NAME;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,68 +15,65 @@ import com.practice.urlPoller.Events.EventHandler;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.file.FileSystem;
 import io.vertx.core.file.OpenOptions;
 
 public class WritingVerticle extends VerticleBase
 {
-  private static FileSystem file_system;
+  private static final String SEPARATOR = "||";
+  private static final String FILE_PARENT = "stats/";
+  private static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+  private static final String PROGRESS_UNIT_FORMAT = "TIME: %s[\n%s]\n\n";
 
   @Override
   public Future<?> start() throws IOException
   {
 
-    var event_handler = new EventHandler(vertx);
+    var eventHandler = new EventHandler(vertx);
 
-    event_handler.consume(Event.PROCESS_FAILED, message -> {
+    eventHandler.consume(Event.PROCESS_FAILED, message -> {
       var json = message.body();
-      var command = json.getString("command");
-      var exit_code = json.getString("exit-code");
-      var msg = json.getString("data");
-
       var notification = "Process Failed\nCOMMAND:   %s\nEXIT_CODE: %s\nMSG:       %s"
-                                                                                      .formatted(command,
-                                                                                                 exit_code,
-                                                                                                 msg);
+                                                                                      .formatted(json.getString(COMMAND),
+                                                                                                 json.getString(EXIT_CODE),
+                                                                                                 json.getString(DATA));
 
-      var file_name = json.getString("file_name");
-      writeWithTimeStamps(file_name, notification);
+      var fileName = json.getString(FILE_NAME);
+      writeWithTimeStamps(fileName, notification);
       System.out.println(notification);
 
     }
     );
-    event_handler.consume(Event.PROCESS_SUCCEEDED, message -> {
+    eventHandler.consume(Event.PROCESS_SUCCEEDED, message -> {
       var json = message.body();
 
-      var file_name = json.getString("file-name");
-      var file_contents = json.getString("data");
+      var fileName = json.getString(FILE_NAME);
+      var fileContents = json.getString(DATA);
 
-      writeWithTimeStamps(file_name, file_contents);
+      writeWithTimeStamps(fileName, fileContents);
     }
     );
 
     return Future.succeededFuture();
   }
 
-  private void writeWithTimeStamps(String file_name, String file_contents)
+  private void writeWithTimeStamps(String fileName, String fileContents)
   {
-    file_system = vertx.fileSystem();
 
-    var options = new OpenOptions()
-                                   .setAppend(true)
-                                   .setCreate(true);
+    vertx.fileSystem()
+         .open(FILE_PARENT + fileName,
+               new OpenOptions()
+                                .setAppend(true)
+                                .setCreate(true))
+         .onFailure(Throwable::printStackTrace)
+         .onSuccess(file -> {
+           var format = PROGRESS_UNIT_FORMAT
+                                            .formatted(
+                                                       System.currentTimeMillis() + SEPARATOR + LocalDateTime.now()
+                                                                                                             .format(DateTimeFormatter.ofPattern(DATE_TIME_FORMAT)) + "\n",
+                                                       fileContents);
+           file.write(Buffer.buffer(format));
 
-
-    var open_file = file_system.open("stats/" + file_name, options);
-
-    open_file.onFailure(Throwable::printStackTrace).onSuccess(file -> {
-      var formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-      var timestamp = System.currentTimeMillis() + "||" + LocalDateTime.now().format(formatter) + "\n";
-
-      var format = "TIME: %s[\n%s]\n\n".formatted(timestamp, file_contents);
-      file.write(Buffer.buffer(format));
-
-    });
+         });
   }
 
 

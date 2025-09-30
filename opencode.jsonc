@@ -1,0 +1,225 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "manual",
+  "autoupdate": true,
+  "agent": {
+    "build": {
+      "description": "Main development agent for Java/Vert.x projects with smart task delegation",
+      "temperature": 0.1,
+      "mode": "primary",
+      "model": "github/gpt-4o",
+      "prompt": "You are a Java/Vert.x expert with smart delegation capabilities. Analyze requests and delegate to appropriate specialized agents when beneficial. Focus on:\n\n1. **Smart Delegation**: Route complex tasks to specialized sub-agents\n2. **Context Preservation**: Maintain session context across agent interactions\n3. **Asynchronous Patterns**: Leverage Vert.x event-driven architecture\n4. **Best Practices**: Follow Java 17 and Vert.x 5.x best practices\n5. **Testing**: Ensure comprehensive test coverage\n6. **Performance**: Optimize for async/non-blocking patterns\n\nWhen delegating:\n- Use parallel sub-agents for independent tasks\n- Preserve context between agents\n- Coordinate results efficiently\n- Always validate final integration",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "webfetch": "ask"
+      },
+      "tools": {
+        "task": true,
+        "todowrite": true,
+        "todoread": true
+      }
+    },
+    "java-expert": {
+      "description": "Java specialist for code analysis, refactoring, and best practices",
+      "temperature": 0.05,
+      "mode": "subagent",
+      "model": "github/claude-3-5-sonnet",
+      "prompt": "You are a Java 17 expert specializing in:\n\n- Modern Java patterns and idioms\n- Concurrent programming with CompletableFuture\n- Stream API and functional programming\n- Clean code and SOLID principles\n- Performance optimization\n- Memory management\n\nFocus on producing high-quality, maintainable Java code that follows best practices.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "vertx-specialist": {
+      "description": "Vert.x framework specialist for event-driven and async programming",
+      "temperature": 0.1,
+      "mode": "subagent",
+      "model": "github/gpt-4o",
+      "prompt": "You are a Vert.x 5.x specialist focusing on:\n\n- Verticle lifecycle management\n- Event bus patterns and messaging\n- Async/non-blocking I/O\n- Future and Promise handling\n- Clustering and distributed systems\n- Performance optimization for event loops\n\nEnsure all solutions follow Vert.x best practices and leverage its reactive capabilities.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "test-engineer": {
+      "description": "Testing specialist for unit, integration, and performance testing",
+      "temperature": 0.1,
+      "mode": "subagent",
+      "model": "github/gpt-4o",
+      "prompt": "You are a testing expert specializing in:\n\n- JUnit 5 and modern testing patterns\n- Vert.x async testing with TestContext\n- Mockito and test doubles\n- Integration testing strategies\n- Performance and load testing\n- Test-driven development\n\nCreate comprehensive, maintainable test suites that ensure code quality and reliability.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "build-optimizer": {
+      "description": "Maven build and dependency management specialist",
+      "temperature": 0.05,
+      "mode": "subagent",
+      "model": "github/claude-3-5-sonnet",
+      "prompt": "You are a Maven expert focusing on:\n\n- Dependency management and conflict resolution\n- Build optimization and plugin configuration\n- Multi-module project structures\n- Packaging and deployment strategies\n- CI/CD integration\n\nOptimize build processes for efficiency and maintainability.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "performance-analyst": {
+      "description": "Performance analysis and optimization specialist",
+      "temperature": 0.1,
+      "mode": "subagent",
+      "model": "github/gpt-4o",
+      "prompt": "You are a JVM and async performance expert specializing in:\n\n- JVM tuning and garbage collection optimization\n- Async/non-blocking performance patterns\n- Memory leak detection and prevention\n- Profiling and monitoring\n- Scalability analysis\n- Event loop optimization\n\nIdentify bottlenecks and provide actionable optimization recommendations.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "docs-curator": {
+      "description": "Documentation and architectural design specialist",
+      "temperature": 0.2,
+      "mode": "subagent",
+      "model": "github/gpt-4o",
+      "prompt": "You are a technical documentation expert focusing on:\n\n- Clear, comprehensive API documentation\n- Architectural decision records (ADRs)\n- Code comments and inline documentation\n- README and setup instructions\n- Sequence and system diagrams\n\nCreate documentation that enables easy onboarding and maintenance.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    }
+  },
+  "command": {
+    "analyze-vertx": {
+      "description": "Analyze Vert.x application architecture and patterns",
+      "template": "Analyze this Vert.x application focusing on:\n1. Verticle deployment patterns\n2. Event bus usage\n3. Async/await patterns\n4. Performance characteristics\n5. Scalability considerations\n\nProvide recommendations for improvements.",
+      "agent": "vertx-specialist"
+    },
+    "optimize-performance": {
+      "description": "Analyze and optimize application performance",
+      "template": "Perform comprehensive performance analysis:\n1. Identify bottlenecks\n2. Analyze async patterns\n3. Review memory usage\n4. Check event loop blocking\n5. Suggest optimizations\n\nFocus on Vert.x-specific performance patterns.",
+      "agent": "performance-analyst"
+    },
+    "review-java": {
+      "description": "Review Java code for best practices and improvements",
+      "template": "Review this Java code for:\n1. Modern Java patterns\n2. Code quality and maintainability\n3. Potential bugs or issues\n4. Performance implications\n5. Refactoring opportunities\n\nProvide specific improvement suggestions.",
+      "agent": "java-expert"
+    },
+    "generate-tests": {
+      "description": "Generate comprehensive tests for components",
+      "template": "Create comprehensive tests for this component:\n1. Unit tests with JUnit 5\n2. Async tests for Vert.x components\n3. Integration tests where needed\n4. Edge cases and error conditions\n5. Performance tests if applicable\n\nEnsure high test coverage and quality.",
+      "agent": "test-engineer"
+    },
+    "optimize-build": {
+      "description": "Optimize Maven build configuration",
+      "template": "Review and optimize the Maven build:\n1. Dependency management\n2. Plugin configuration\n3. Build performance\n4. Packaging optimization\n5. CI/CD integration\n\nProvide concrete improvements.",
+      "agent": "build-optimizer"
+    },
+    "document-architecture": {
+      "description": "Document system architecture and design decisions",
+      "template": "Create comprehensive documentation:\n1. System architecture overview\n2. Component interactions\n3. Deployment patterns\n4. Configuration guide\n5. Troubleshooting guide\n\nFocus on clarity and completeness.",
+      "agent": "docs-curator"
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "ask"
+  },
+  "tools": {
+    "task": true,
+    "todowrite": true,
+    "todoread": true,
+    "bash": true,
+    "edit": true,
+    "read": true,
+    "write": true,
+    "glob": true,
+    "grep": true,
+    "list": true
+  },
+  "watcher": {
+    "ignore": [
+      "target/**",
+      "*.log",
+      ".mvn/**",
+      "logs/**"
+    ]
+  },
+  "experimental": {
+    "hook": {
+      "file_edited": {
+        "src/main/java/**/*.java": [
+          {
+            "command": [
+              "./mvnw",
+              "compile"
+            ],
+            "environment": {
+              "MAVEN_OPTS": "-Xmx512m"
+            }
+          }
+        ]
+      },
+      "session_completed": [
+        {
+          "command": [
+            "./mvnw",
+            "clean",
+            "test"
+          ],
+          "environment": {
+            "MAVEN_OPTS": "-Xmx1g"
+          }
+        }
+      ]
+    }
+  },
+  "formatter": {
+    "java": {
+      "command": [
+        "google-java-format",
+        "--replace"
+      ],
+      "extensions": [
+        ".java"
+      ]
+    }
+  },
+  "lsp": {
+    "java": {
+      "command": [
+        "jdtls"
+      ],
+      "extensions": [
+        ".java"
+      ],
+      "initialization": {
+        "settings": {
+          "java": {
+            "configuration": {
+              "maven": {
+                "downloadSources": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "instructions": [
+    "CLAUDE.md",
+    "architecture.md"
+  ],
+  "tui": {
+    "scroll_speed": 3
+  },
+  "keybinds": {
+    "leader": "ctrl+x",
+    "agent_cycle": "tab",
+    "agent_cycle_reverse": "shift+tab",
+    "session_export": "ctrl+x,e",
+    "session_new": "ctrl+x,n",
+    "session_compact": "ctrl+x,c",
+    "messages_copy": "ctrl+x,y",
+    "tool_details": "ctrl+x,d"
+  }
+}
