@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/home/prem-modha/projects/Motadata/verts/urlPoller/logs/.c84c37b378a1e3422ee6e1c5ac27113a30266d3c-audit.json",
+    "files": [
+        {
+            "date": 1759237634950,
+            "name": "/home/prem-modha/projects/Motadata/verts/urlPoller/logs/mcp-puppeteer-2025-09-30.log",
+            "hash": "bf31c9ebbb7d83d90b002873ab65e38939e46ca892a7eb8b9e6c316d00b7aeca"
+        }
+    ],
+    "hashType": "sha256"
+}

@@ -3,9 +3,7 @@ package com.practice.urlPoller.Events;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 
 public class EventHandler
@@ -17,20 +15,16 @@ public class EventHandler
     this.vertx = vertx;
   }
 
-
-  /**
-   * @return EventBus for fluent interface
-   */
-  public EventBus publish(Event event, JsonObject message)
+  public void publish(Event event, JsonObject message)
   {
-    System.out.printf("EVENT: `%s` `%s` %n", event.toString(), message);
+    // System.out.printf("EVENT: `%s` `%s` %n", event.toString(), message);
     // System.out.printf("EVENT: `%s` %n", event.toString()/* , message */);
-    return vertx.eventBus().publish(event.toString(), message != null ? message : "");
+    vertx.eventBus().publish(event.toString(), message != null ? message : "");
   }
 
-  public MessageConsumer<JsonObject> consume(Event event, Handler<Message<JsonObject>> handler)
+  public void consume(Event event, Handler<Message<JsonObject>> handler)
   {
-    return vertx.eventBus().consumer(event.toString(), handler);
+    vertx.eventBus().consumer(event.toString(), handler);
   }
 
 }

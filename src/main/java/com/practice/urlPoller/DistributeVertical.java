@@ -1,17 +1,20 @@
 package com.practice.urlPoller;
 
 
-import com.practice.urlPoller.Events.Event;
-import com.practice.urlPoller.Events.EventHandler;
-import io.vertx.core.Future;
-import io.vertx.core.VerticleBase;
+import static com.practice.urlPoller.Constanst.JsonFilds.DATA;
+import static com.practice.urlPoller.Events.Event.TIMER_EXPIRED;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static com.practice.urlPoller.Constanst.JsonFilds.DATA;
+import com.practice.urlPoller.Events.Event;
+import com.practice.urlPoller.Events.EventHandler;
+
+import io.vertx.core.Future;
+import io.vertx.core.VerticleBase;
+import io.vertx.core.json.JsonObject;
 
 public class DistributeVertical extends VerticleBase
 {
@@ -23,6 +26,31 @@ public class DistributeVertical extends VerticleBase
   public Future<?> start()
   {
     var eventHandler = new EventHandler(vertx);
+    eventHandler.consume(TIMER_EXPIRED, message -> {
+      var timer = Byte.valueOf(message.body().getString(DATA));
+
+      System.out.println("timer = " + timer);
+      var set = ipTable.get(timer);
+
+      var executor = vertx.createSharedWorkerExecutor("Motadata", 5);
+      Future.all(
+                 set.stream()
+                    .map(ip -> executor.executeBlocking(() -> Worker.work(vertx,
+                                                                          new ProcessBuilder("ping",
+                                                                                             "-c",
+                                                                                             "1",
+                                                                                             ip.getAddress()))
+                    ))
+                    .toList()
+
+      )
+            .onFailure(Throwable::printStackTrace);
+
+
+      vertx.setTimer((timer * 1000), i -> {
+        eventHandler.publish(TIMER_EXPIRED, message.body());
+      });
+    });
 
     eventHandler.consume(Event.CONFIG_LOADED, json -> {
       var data = json.body().getString(DATA);
@@ -37,16 +65,12 @@ public class DistributeVertical extends VerticleBase
         if (!ipTable.containsKey(pollTime)) ipTable.put(pollTime, new HashSet<>());
 
         ipTable.get(pollTime).add(ip);
-
       }
+
 
       for (var ent : ipTable.entrySet())
       {
-        //        System.out.println(ent);
-        vertx.setPeriodic(
-          0,
-          ent.getKey() * 1000,
-          (id) -> vertx.deployVerticle(new PingVerticle(ent.getValue())));
+        eventHandler.publish(TIMER_EXPIRED, new JsonObject().put(DATA, ent.getKey()));
       }
 
     });

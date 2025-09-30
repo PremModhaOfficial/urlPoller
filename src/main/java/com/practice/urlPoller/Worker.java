@@ -20,6 +20,7 @@ public class Worker
 
   public static boolean work(Vertx vertx, ProcessBuilder processBuilder)
   {
+    System.out.println("Worker.work");
 
     try
     {

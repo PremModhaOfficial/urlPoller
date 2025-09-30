@@ -8,7 +8,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 import static com.practice.urlPoller.Constanst.JsonFilds.DATA;
@@ -19,8 +18,6 @@ public class MainVerticle extends VerticleBase
 
   public static void main(String[] args)
   {
-
-
     if (args.length > 0)
     {
       PATH = args[0];
@@ -31,10 +28,9 @@ public class MainVerticle extends VerticleBase
   }
 
   @Override
-  public Future<?> start() throws IOException
+  public Future<?> start()
   {
 
-    System.out.println("MainVerticle.main");
     var verticalList = new ArrayList<Future<String>>();
     var eventHandler = new EventHandler(vertx);
     // read file
@@ -42,10 +38,8 @@ public class MainVerticle extends VerticleBase
 
     var data = Buffer.buffer();
 
-
     verticalList.add(vertx.deployVerticle(new DistributeVertical()));
     verticalList.add(vertx.deployVerticle(new WritingVerticle()));
-
     Future.all(verticalList)
       .onFailure(Throwable::printStackTrace);
 
