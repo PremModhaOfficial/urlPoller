@@ -21,7 +21,7 @@ public class WorkerVerticle extends VerticleBase
   @Override
   public Future<?> start() throws Exception
   {
-    System.out.println(processBuilder.command());
+    // System.out.println(processBuilder.command());
 
     final var event_hander = new EventHandler(vertx);
     var process_buffer = new StringBuffer();
@@ -41,31 +41,38 @@ public class WorkerVerticle extends VerticleBase
         process_buffer.append(line + "\n");
         // System.out.println("stdout: " + line);
       }
-      var json = new JsonObject().put("data", process_buffer.toString())
-                                 .put("file-name", file_name)
-                                 .put("exit-code", exit);
-      event_hander.publish(Event.PROCESS_FINISHED_WITH_SUCCESS, json);
-    }
-
-    // Read stderr
-    try (var errReader = proc.errorReader())
-    {
-      String errLine;
-      process_buffer = new StringBuffer();
-      while ((errLine = errReader.readLine()) != null)
+      if (exit == 0)
       {
-        process_buffer.append(errLine);
-        System.out.println("stderr: " + errLine);
+        var json = new JsonObject().put("data", process_buffer.toString())
+                                   .put("file-name", file_name)
+                                   .put("command", processBuilder.command().toString())
+                                   .put("exit-code", exit);
+        event_hander.publish(Event.PROCESS_SUCCEEDED, json);
+      }
+      else
+      {
+        var json = new JsonObject().put("data", process_buffer.toString())
+                                   .put("file-name", file_name)
+                                   .put("command", processBuilder.command().toString())
+                                   .put("exit-code", exit);
+        event_hander.publish(Event.PROCESS_FAILED, json);
       }
     }
-    System.out.println("Process exited with code: " + exit);
-    if (exit != 0)
-    {
-      var json = new JsonObject().put("data", process_buffer.toString())
-                                 .put("file-name", file_name)
-                                 .put("exit-code", exit);
-      event_hander.publish(Event.PROCESS_FAILED, json);
-    }
+
+    // INFO: did not execute
+    // Read stderr
+    //
+    // try (var errReader = proc.errorReader())
+    // {
+    //   String errLine;
+    //   process_buffer = new StringBuffer();
+    //   while ((errLine = errReader.readLine()) != null)
+    //   {
+    //     process_buffer.append(errLine);
+    //     System.out.println("stderr: " + errLine);
+    //   }
+    // }
+    // System.out.println("Process exited with code: " + exit);
 
     return Future.succeededFuture();
   }
