@@ -18,7 +18,6 @@ import io.vertx.core.json.JsonObject;
 
 public class DistributeVertical extends VerticleBase
 {
-
   public static final String LINE_BREAK = "\n";
   private static Map<Byte, Set<Ip>> ipTable;
 
@@ -32,24 +31,12 @@ public class DistributeVertical extends VerticleBase
       System.out.println("timer = " + timer);
       var set = ipTable.get(timer);
 
-      var executor = vertx.createSharedWorkerExecutor("Motadata", 5);
+      var executor = vertx.createSharedWorkerExecutor("Motadata");
       Future.all(
-                 set.stream()
-                    .map(ip -> executor.executeBlocking(() -> Worker.work(vertx,
-                                                                          new ProcessBuilder("ping",
-                                                                                             "-c",
-                                                                                             "1",
-                                                                                             ip.getAddress()))
-                    ))
-                    .toList()
+          set.stream().map(ip -> executor.executeBlocking(() -> Worker.work(vertx, new ProcessBuilder("ping", "-c", "1", "-w", "2", ip.getAddress()))
+          )).toList()
 
-      )
-            .onFailure(Throwable::printStackTrace);
-
-
-      vertx.setTimer((timer * 1000), i -> {
-        eventHandler.publish(TIMER_EXPIRED, message.body());
-      });
+      ).onFailure(Throwable::printStackTrace);
     });
 
     eventHandler.consume(Event.CONFIG_LOADED, json -> {
@@ -68,16 +55,15 @@ public class DistributeVertical extends VerticleBase
       }
 
 
-      for (var ent : ipTable.entrySet())
+      for (var ipByTime : ipTable.entrySet())
       {
-        eventHandler.publish(TIMER_EXPIRED, new JsonObject().put(DATA, ent.getKey()));
+        eventHandler.publish(TIMER_EXPIRED, new JsonObject().put(DATA, ipByTime.getKey()));
       }
 
     });
-
-
     return Future.succeededFuture();
   }
 
 }
+
 
