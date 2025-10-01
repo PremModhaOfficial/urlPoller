@@ -1,7 +1,11 @@
 package com.practice.urlPoller.Events;
 
-public enum Event
+public class Event
 {
-  CONFIG_LOADED, PROCESS_SUCCEEDED, PROCESS_FAILED, TIMER_EXPIRED,
+  public static final String CONFIG_LOADED = "config.loaded";
+  public static final String TIMER_EXPIRED = "timer.expired";
+
+  public static final String PROCESS_SUCCEEDED = "process.succeeded";
+  public static final String PROCESS_FAILED = "process.failed";
 
 }

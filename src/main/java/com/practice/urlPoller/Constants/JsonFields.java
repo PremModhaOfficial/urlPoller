@@ -1,7 +1,7 @@
 
-package com.practice.urlPoller.Constanst;
+package com.practice.urlPoller.Constants;
 
-public class JsonFilds
+public class JsonFields
 {
 
   public static final String DATA = "data";

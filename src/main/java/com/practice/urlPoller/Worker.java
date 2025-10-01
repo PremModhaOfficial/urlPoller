@@ -1,80 +1,104 @@
 package com.practice.urlPoller;
 
-import static com.practice.urlPoller.Constanst.JsonFilds.COMMAND;
-import static com.practice.urlPoller.Constanst.JsonFilds.DATA;
-import static com.practice.urlPoller.Constanst.JsonFilds.EXIT_CODE;
-import static com.practice.urlPoller.Constanst.JsonFilds.FILE_NAME;
-import static com.practice.urlPoller.Events.Event.PROCESS_FAILED;
-import static com.practice.urlPoller.Events.Event.PROCESS_SUCCEEDED;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
-import com.practice.urlPoller.Events.EventHandler;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.practice.urlPoller.Constants.JsonFields.*;
+import static com.practice.urlPoller.Events.Event.PROCESS_FAILED;
+import static com.practice.urlPoller.Events.Event.PROCESS_SUCCEEDED;
 
 // executes for a single ip Address
 public class Worker
 {
-
-  public static boolean work(Vertx vertx, ProcessBuilder processBuilder)
+  // Custom thread factory for naming process handler threads
+  private static final ThreadFactory PROCESS_HANDLER_THREAD_FACTORY = new ThreadFactory()
   {
-    System.out.println("Worker.work");
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+    
+    @Override
+    public Thread newThread(Runnable r)
+    {
+      Thread t = new Thread(r);
+      t.setName("ping-handler-" + threadNumber.getAndIncrement());
+      t.setDaemon(true);
+      return t;
+    }
+  };
+  
+  // Shared executor for async process handling with named threads
+  private static final java.util.concurrent.ExecutorService ASYNC_EXECUTOR = Executors.newCachedThreadPool(PROCESS_HANDLER_THREAD_FACTORY);
+
+  public static CompletableFuture<Boolean> work(Vertx vertx, ProcessBuilder processBuilder)
+  {
+    String fileName = processBuilder.command().get(5);
 
     try
     {
-      final var eventHandler = new EventHandler(vertx);
-      var processBuffer = new StringBuilder();
-
-      // Updated index from 3 to 5 due to additional ping arguments (-w and timeout value)
-      var fileName = processBuilder.command().get(5);
-
-
       var proc = processBuilder.start();
-      
-      // Wait for process with 5 second timeout
-      boolean completed = proc.waitFor(5, TimeUnit.SECONDS);
-      
-      if (!completed)
-      {
-        // Process didn't complete in time, destroy it
-        proc.destroy();
-        System.err.println("Process timed out for: " + fileName);
-        
-        var json = new JsonObject()
-          .put(DATA, "Process timed out after 5 seconds")
-          .put(FILE_NAME, fileName)
-          .put(COMMAND, processBuilder.command().toString())
-          .put(EXIT_CODE, -1);
-        eventHandler.publish(PROCESS_FAILED, json);
-        return false;
-      }
-      
-      var exit = proc.exitValue();
 
-      // Read stdout
-      try (var reader = proc.inputReader())
-      {
-        String line;
-        processBuffer = new StringBuilder();
-        while ((line = reader.readLine()) != null)
-        {
-          processBuffer.append(line).append("\n");
-          // System.out.println("stdout: " + line);
-        }
-        var json = new JsonObject().put(DATA, processBuffer.toString()).put(FILE_NAME, fileName).put(COMMAND, processBuilder.command().toString()).put(EXIT_CODE, exit);
-        eventHandler.publish(exit == 0 ? PROCESS_SUCCEEDED : PROCESS_FAILED, json);
-      }
-    } catch (IOException | InterruptedException ioException)
+      // Use Process.onExit() for non-blocking async wait with custom executor
+      return proc.onExit()
+        .orTimeout(5, TimeUnit.SECONDS)
+        .handleAsync((process, throwable) -> {
+          // This runs on our named thread pool
+          Thread.currentThread().setName("ping-handler-" + fileName);
+          
+          if (throwable != null)
+          {
+            // Timeout or other error occurred
+            proc.destroyForcibly();
+            System.err.println("Process timed out for: " + fileName + " on thread: " + Thread.currentThread().getName());
+
+            var json = new JsonObject()
+              .put(DATA, "Process timed out after 5 seconds")
+              .put(FILE_NAME, fileName)
+              .put(COMMAND, processBuilder.command().toString())
+              .put(EXIT_CODE, -1);
+            vertx.eventBus().publish(PROCESS_FAILED, json);
+            return false;
+          }
+
+          // Process completed successfully within timeout
+          var exit = process.exitValue();
+          var processBuffer = new StringBuilder();
+
+          // Read stdout
+          try (BufferedReader reader = process.inputReader())
+          {
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+              processBuffer.append(line).append("\n");
+            }
+          } catch (IOException e)
+          {
+            System.err.println("Error reading process output for: " + fileName);
+            e.printStackTrace();
+          }
+
+          var json = new JsonObject()
+            .put(DATA, processBuffer.toString())
+            .put(FILE_NAME, fileName)
+            .put(COMMAND, processBuilder.command().toString())
+            .put(EXIT_CODE, exit);
+          vertx.eventBus().publish(exit == 0 ? PROCESS_SUCCEEDED : PROCESS_FAILED, json);
+
+          return true;
+        }, ASYNC_EXECUTOR);
+
+    } catch (IOException ioException)
     {
       ioException.printStackTrace();
-      return false;
+      return CompletableFuture.completedFuture(false);
     }
-
-    return true;
-
   }
 
 }
