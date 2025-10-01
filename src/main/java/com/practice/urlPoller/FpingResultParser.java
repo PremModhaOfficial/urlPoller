@@ -1,15 +1,14 @@
 package com.practice.urlPoller;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Parser for fping output format using concurrent parsing for large result sets.
  * Thread-safe implementation using ConcurrentHashMap.
- * 
  * Expected fping output format (-c 1 -q):
  * 8.8.8.8     : xmt/rcv/%loss = 1/1/0%, min/avg/max = 15.2/15.2/15.2
  * 192.168.1.1 : xmt/rcv/%loss = 1/0/100%
@@ -29,7 +28,7 @@ public class FpingResultParser
   /**
    * Parse fping output into a map of IP -> PingResult using parallel streams for performance.
    * Thread-safe using ConcurrentHashMap.
-   * 
+   *
    * @param fpingOutput The complete stdout from fping command
    * @return ConcurrentHashMap mapping each IP to its PingResult
    */
@@ -41,33 +40,32 @@ public class FpingResultParser
     }
 
     // Use parallel stream for concurrent parsing of large result sets
-    Map<String, PingResult> results = Stream.of(fpingOutput.split("\n"))
+
+    return fpingOutput.lines()
       .parallel()  // Enable parallel processing for 1000+ IPs
-      .map(String::trim)
+      .map(String::strip)
       .filter(line -> !line.isEmpty())
       .filter(line -> FPING_PATTERN.matcher(line).find())  // Only process valid fping lines
       .map(FpingResultParser::parseLine)
-      .filter(result -> result != null)  // Skip any parsing failures
+      .filter(Objects::nonNull)  // Skip any parsing failures
       .collect(
         ConcurrentHashMap::new,  // Thread-safe map
         (map, result) -> map.put(result.getIp(), result),
         ConcurrentHashMap::putAll  // Thread-safe merge for parallel streams
       );
-
-    return results;
   }
 
   /**
    * Parse a single fping output line into a PingResult.
    * Thread-safe - no shared state.
-   * 
+   *
    * @param line Single line from fping output
    * @return PingResult or null if parsing fails
    */
   private static PingResult parseLine(String line)
   {
     Matcher matcher = FPING_PATTERN.matcher(line);
-    
+
     if (!matcher.find())
     {
       System.err.println("Failed to parse fping line: " + line);
@@ -77,7 +75,6 @@ public class FpingResultParser
     try
     {
       String ip = matcher.group(1);
-      int packetsSent = Integer.parseInt(matcher.group(2));
       int packetsReceived = Integer.parseInt(matcher.group(3));
       int packetLoss = Integer.parseInt(matcher.group(4));
 
@@ -91,12 +88,12 @@ public class FpingResultParser
         double maxRtt = Double.parseDouble(matcher.group(7));
 
         return new PingResult(ip, true, minRtt, avgRtt, maxRtt,
-          packetsSent, packetsReceived, packetLoss, line);
+          packetLoss);
       }
       else
       {
         // Host unreachable
-        return PingResult.unreachable(ip, line);
+        return PingResult.unreachable(ip);
       }
     }
     catch (NumberFormatException e)
@@ -107,14 +104,4 @@ public class FpingResultParser
     }
   }
 
-  /**
-   * Parse and validate a single IP result for testing purposes.
-   * 
-   * @param line Single fping output line
-   * @return PingResult or null
-   */
-  public static PingResult parseLinePublic(String line)
-  {
-    return parseLine(line);
-  }
 }

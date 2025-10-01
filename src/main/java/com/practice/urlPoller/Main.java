@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 public class Main
@@ -21,14 +20,12 @@ public class Main
     PATH = args.length > 0 ? args[0] : PATH;
 
     // Configure Vert.x with custom thread naming
-    var vertxOptions = new VertxOptions().setInternalBlockingPoolSize(2).setEventLoopPoolSize(4); // Configure event loop threads
+    var vertxOptions = new VertxOptions().setInternalBlockingPoolSize(2).setEventLoopPoolSize(2).setWorkerPoolSize(10); // Configure event loop threads
 
     var vertx = Vertx.vertx(vertxOptions);
 
     var verticalList = new ArrayList<Future<String>>();
     var fs = vertx.fileSystem();
-
-    var data = Buffer.buffer();
 
     verticalList.add(vertx.deployVerticle(new Distributor()));
     verticalList.add(vertx.deployVerticle(new FileWriter()));
@@ -37,8 +34,7 @@ public class Main
       System.out.println("All verticles deployed successfully");
 
       fs.readFile(PATH).onComplete(buffer -> {
-        data.appendBuffer(buffer.result());
-        var json = new JsonObject().put(DATA, data.toString());
+        var json = new JsonObject().put(DATA, buffer.result().toString());
         vertx.eventBus().publish(CONFIG_LOADED, json);
 
       }).onFailure(Throwable::printStackTrace);
