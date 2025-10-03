@@ -1,4 +1,4 @@
-package com.practice.urlPoller.Events;
+package com.practice.urlPoller.Constants;
 
 public class Event
 {

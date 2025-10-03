@@ -8,8 +8,8 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
 
+import static com.practice.urlPoller.Constants.Event.CONFIG_LOADED;
 import static com.practice.urlPoller.Constants.JsonFields.DATA;
-import static com.practice.urlPoller.Events.Event.CONFIG_LOADED;
 
 public class Main
 {
@@ -36,7 +36,8 @@ public class Main
     var vertxOptions = new VertxOptions()
       .setEventLoopPoolSize(2)
       .setWorkerPoolSize(1)
-      .setInternalBlockingPoolSize(2);
+      .setInternalBlockingPoolSize(2)
+      ;
 
     var vertx = Vertx.vertx(vertxOptions);
 
@@ -53,23 +54,32 @@ public class Main
     verticalList.add(vertx.deployVerticle(new Distributor()));
     verticalList.add(vertx.deployVerticle(new FileWriter()));
 
-    Future.all(verticalList).onFailure(Throwable::printStackTrace).onSuccess(result -> {
-      System.out.println("All verticles deployed successfully");
+    Future.all(verticalList)
+          .onFailure(Throwable::printStackTrace)
+          .onSuccess(result -> {
+            System.out.println("All verticles deployed successfully");
 
-      fs.readFile(PATH).onComplete(buffer -> {
-        var json = new JsonObject().put(DATA, buffer.result().toString());
-        vertx.eventBus().publish(CONFIG_LOADED, json);
+            fs.readFile(PATH)
+              .onComplete(buffer -> {
+                var json = new JsonObject().put(DATA, buffer.result()
+                                                            .toString());
+                vertx.eventBus()
+                     .publish(CONFIG_LOADED, json);
 
-      }).onFailure(Throwable::printStackTrace);
-    });
+              })
+              .onFailure(Throwable::printStackTrace)
+            ;
+          })
+    ;
 
     // Cleanup on shutdown
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      if (fpingWorkerPool != null)
-      {
-        fpingWorkerPool.close();
-      }
-      vertx.close();
-    }));
+    Runtime.getRuntime()
+           .addShutdownHook(new Thread(() -> {
+             if (fpingWorkerPool != null)
+             {
+               fpingWorkerPool.close();
+             }
+             vertx.close();
+           }));
   }
 }

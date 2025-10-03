@@ -12,51 +12,56 @@ import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.practice.urlPoller.Constants.JsonFields.*;
-import static com.practice.urlPoller.Events.Event.PROCESS_FAILED;
-import static com.practice.urlPoller.Events.Event.PROCESS_SUCCEEDED;
+import static com.practice.urlPoller.Constants.Event.PROCESS_FAILED;
+import static com.practice.urlPoller.Constants.Event.PROCESS_SUCCEEDED;
+import static com.practice.urlPoller.Constants.JsonFields.DATA;
+import static com.practice.urlPoller.Constants.JsonFields.FILE_NAME;
 
 public class FileWriter extends VerticleBase
 {
+  public static final String S_D_S = "%s,%d,%s\n";
   private static final String FILE_PARENT = "stats/";
   private static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
   private static final DateTimeFormatter TIMESTAMP_FORMATTER =
-      DateTimeFormatter.ofPattern(DATE_TIME_FORMAT);
+    DateTimeFormatter.ofPattern(DATE_TIME_FORMAT);
   private static final String CSV_EXTENSION = ".csv";
-
   // CSV header format
   private static final String CSV_HEADER = "Timestamp,EpochMs,IP,Status,PacketLoss,MinRTT_ms,AvgRTT_ms,MaxRTT_ms\n";
-
   // Track which files have been initialized with headers (thread-safe)
   private static final Set<String> initializedFiles = ConcurrentHashMap.newKeySet();
-  public static final String S_D_S = "%s,%d,%s\n";
 
   static
   {
-    new File(FILE_PARENT).mkdir();
+    var parentDir = new File(FILE_PARENT);
+    if (parentDir.mkdir())
+    {
+      System.out.println("MADE DIRECTORY: " + parentDir.getAbsolutePath());
+    }
   }
 
   @Override
   public Future<?> start()
   {
-    vertx.eventBus().consumer(PROCESS_FAILED, message -> {
-        var json = (JsonObject) message.body();
-        var fileName = json.getString(FILE_NAME);
-        var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
+    vertx.eventBus()
+         .consumer(PROCESS_FAILED, message -> {
+             var json = (JsonObject) message.body();
+             var fileName = json.getString(FILE_NAME);
+             var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
 
-        writeCsvRow(fileName, csvData);
-        System.err.println("Ping failed: " + csvData);
-      }
-    );
+             writeCsvRow(fileName, csvData);
+             System.err.println("Ping failed: " + csvData);
+           }
+         );
 
-    vertx.eventBus().consumer(PROCESS_SUCCEEDED, message -> {
-        var json = (JsonObject) message.body();
-        var fileName = json.getString(FILE_NAME);
-        var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
+    vertx.eventBus()
+         .consumer(PROCESS_SUCCEEDED, message -> {
+             var json = (JsonObject) message.body();
+             var fileName = json.getString(FILE_NAME);
+             var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
 
-        writeCsvRow(fileName, csvData);
-      }
-    );
+             writeCsvRow(fileName, csvData);
+           }
+         );
 
     return Future.succeededFuture();
   }
@@ -67,7 +72,7 @@ public class FileWriter extends VerticleBase
    * Adds CSV header on first write.
    *
    * @param fileName IP address (used as filename)
-   * @param csvRow CSV row data (IP,Status,Loss,Min,Avg,Max)
+   * @param csvRow   CSV row data (IP,Status,Loss,Min,Avg,Max)
    */
   private void writeCsvRow(String fileName, String csvRow)
   {
@@ -76,30 +81,35 @@ public class FileWriter extends VerticleBase
     // Check if file needs initialization with header (thread-safe)
     boolean needsHeader = initializedFiles.add(fileName);  // Returns true if newly added
 
-    vertx.fileSystem().open(filePath, new OpenOptions().setAppend(true).setCreate(true))
-      .onFailure(Throwable::printStackTrace)
-      .onSuccess(file -> {
+    vertx.fileSystem()
+         .open(filePath, new OpenOptions().setAppend(true)
+                                          .setCreate(true))
+         .onFailure(Throwable::printStackTrace)
+         .onSuccess(file -> {
 
-        Buffer buffer = Buffer.buffer();
+           Buffer buffer = Buffer.buffer();
 
-        // Add header if this is the first write to this file
-        if (needsHeader)
-        {
-          buffer.appendString(CSV_HEADER);
-        }
+           // Add header if this is the first write to this file
+           if (needsHeader)
+           {
+             buffer.appendString(CSV_HEADER);
+           }
 
-        // Add timestamp + CSV data
-        String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
-        long epochMs = System.currentTimeMillis();
-        String csvLine = String.format(S_D_S, timestamp, epochMs, csvRow);
+           // Add timestamp + CSV data
+           String timestamp = LocalDateTime.now()
+                                           .format(TIMESTAMP_FORMATTER);
+           long epochMs = System.currentTimeMillis();
+           String csvLine = String.format(S_D_S, timestamp, epochMs, csvRow);
 
-        buffer.appendString(csvLine);
+           buffer.appendString(csvLine);
 
-        // Write and close
-        file.write(buffer)
-          .compose(v -> file.flush())
-          .onComplete(writeResult -> file.close());
-      });
+           // Write and close
+           file.write(buffer)
+               .compose(v -> file.flush())
+               .onComplete(writeResult -> file.close())
+           ;
+         })
+    ;
   }
 
 }

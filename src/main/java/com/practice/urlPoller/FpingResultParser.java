@@ -42,17 +42,18 @@ public class FpingResultParser
     // Use parallel stream for concurrent parsing of large result sets
 
     return fpingOutput.lines()
-      .parallel()  // Enable parallel processing for 1000+ IPs
-      .map(String::strip)
-      .filter(line -> !line.isEmpty())
-      .filter(line -> FPING_PATTERN.matcher(line).find())  // Only process valid fping lines
-      .map(FpingResultParser::parseLine)
-      .filter(Objects::nonNull)  // Skip any parsing failures
-      .collect(
-        ConcurrentHashMap::new,  // Thread-safe map
-        (map, result) -> map.put(result.getIp(), result),
-        ConcurrentHashMap::putAll  // Thread-safe merge for parallel streams
-      );
+                      .parallel()  // Enable parallel processing for 1000+ IPs
+                      .map(String::strip)
+                      .filter(line -> !line.isEmpty())
+                      .filter(line -> FPING_PATTERN.matcher(line)
+                                                   .find())  // Only process valid fping lines
+                      .map(FpingResultParser::parseLine)
+                      .filter(Objects::nonNull)  // Skip any parsing failures
+                      .collect(
+                        ConcurrentHashMap::new,  // Thread-safe map
+                        (map, result) -> map.put(result.getIp(), result),
+                        ConcurrentHashMap::putAll  // Thread-safe merge for parallel streams
+                      );
   }
 
   /**
@@ -89,17 +90,15 @@ public class FpingResultParser
 
         return new PingResult(ip, true, minRtt, avgRtt, maxRtt,
           packetLoss);
-      }
-      else
+      } else
       {
         // Host unreachable
         return PingResult.unreachable(ip);
       }
-    }
-    catch (NumberFormatException e)
+    } catch (NumberFormatException numberFormatException)
     {
       System.err.println("Failed to parse numbers in fping line: " + line);
-      e.printStackTrace();
+//      numberFormatException.printStackTrace();
       return null;
     }
   }

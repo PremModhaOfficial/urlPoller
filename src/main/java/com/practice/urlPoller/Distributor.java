@@ -5,14 +5,12 @@ import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+import static com.practice.urlPoller.Constants.Event.CONFIG_LOADED;
+import static com.practice.urlPoller.Constants.Event.TIMER_EXPIRED;
 import static com.practice.urlPoller.Constants.JsonFields.DATA;
-import static com.practice.urlPoller.Events.Event.CONFIG_LOADED;
-import static com.practice.urlPoller.Events.Event.TIMER_EXPIRED;
 
 public class Distributor extends VerticleBase
 {
@@ -22,8 +20,10 @@ public class Distributor extends VerticleBase
   public static final String FPING_BATCH_FAILED_FOR_INTERVAL = "Fping batch failed for %ss interval: %s";
   public static final String COMMA = ",";
   public static final String HASH = "#";
-  public static final String LOADED_POLLING_INTERVALS = "Loaded %s polling intervals";
-  private static Map<Byte, Set<String>> ipTable;
+  public static final String LOADED_POLLING_INTERVALS = "Loaded %s polling intervals (GCD)";
+  private static final Map<Integer, Integer> gcdTicks = new ConcurrentHashMap<>();
+  private static Map<Integer, Set<String>> ipTable;
+  private static Map<Integer, Map<Integer, Set<String>>> gcdMap;
 
   @Override
   public Future<?> start()
@@ -32,88 +32,127 @@ public class Distributor extends VerticleBase
     // Pool size: 20 workers (can handle 20 concurrent pings)
     // Max execute time: 10 seconds (ping timeout is 5s, add buffer)
 
-    vertx.eventBus().consumer(TIMER_EXPIRED, message -> {
-      var json = (JsonObject) message.body();
-      var timer = json.getInteger(DATA).byteValue();
+    vertx.eventBus()
+         .consumer(TIMER_EXPIRED, message -> {
+           var json = (JsonObject) message.body();
+           var timer = json.getInteger(DATA);
 
-      var set = ipTable.get(timer);
+           var gcdGroup = gcdMap.get(timer);
 
-      if (set == null || set.isEmpty())
-      {
-        System.err.println(NO_IPS_FOUND_FOR_TIMER_INTERVAL + timer);
-        return;
-      }
+           if (gcdGroup == null || gcdGroup.isEmpty())
+           {
+             System.err.println(NO_IPS_FOUND_FOR_TIMER_INTERVAL + timer);
+             return;
+           }
 
-      // Batch execution using fping for high performance
-      // Single process handles all IPs in this interval group
-      var future = FpingBatchWorker.work(vertx, set, timer);
+           // Batch execution using fping for high performance
+           // Single process handles all IPs in this interval group
 
-      future.onComplete(_future -> {
-        if (_future.succeeded())
-        {
-          System.out.printf(COMPLETED_FPING_BATCH_IPS_FOR_INTERVAL, set.size(), timer);
-        } else
-        {
-          System.err.printf(FPING_BATCH_FAILED_FOR_INTERVAL, timer, _future.cause().getMessage());
-        }
-      }).onFailure(Throwable::printStackTrace);
+           var tick = gcdTicks.get(timer);
+           gcdTicks.put(timer, ++tick);
 
-    });
+           var future = FpingBatchWorker.work(vertx, gcdGroup, timer, tick);
 
-    vertx.eventBus().consumer(CONFIG_LOADED, message -> {
-      // Guard against multiple CONFIG_LOADED events
+           future.onComplete(_future -> {
+                   if (_future.succeeded())
+                   {
+                     System.out.printf(COMPLETED_FPING_BATCH_IPS_FOR_INTERVAL, gcdGroup.size(), timer);
+                   } else
+                   {
+                     System.err.printf(FPING_BATCH_FAILED_FOR_INTERVAL, timer, _future.cause()
+                                                                                      .getMessage());
+                   }
+                 })
+                 .onFailure(Throwable::printStackTrace);
 
-      var json = (JsonObject) message.body();
-      var data = json.getString(DATA);
-      var urls = data.split(LINE_BREAK);
-      ipTable = new HashMap<>();
+         });
 
-      for (var url : urls)
-      {
-        if (url.isBlank()) continue; // Skip empty lines
+    vertx.eventBus()
+         .consumer(CONFIG_LOADED, message -> {
+           // Guard against multiple CONFIG_LOADED events
 
-        // Skip comment lines
-        String trimmed = url.trim();
-        if (trimmed.startsWith(HASH)) continue;
+           var json = (JsonObject) message.body();
+           var data = json.getString(DATA);
+           var urls = data.split(LINE_BREAK);
+           ipTable = new HashMap<>();
 
-        var temp = url.split(COMMA);
-        if (temp.length < 2)
-        {
-          System.err.println("Skipping invalid line (missing interval): " + url);
-          continue;
-        }
+           // Track all IPs to detect duplicates across different intervals
 
-        var ip = temp[0].strip();
-        var pollTime = Byte.parseByte(temp[1].strip());
+           for (var url : urls)
+           {
+             if (url.isBlank()) continue; // Skip empty lines
 
-        ipTable.computeIfAbsent(pollTime, k -> new HashSet<>()).add(ip);
-      }
+             // Skip comment lines
+             String trimmed = url.trim();
+             if (trimmed.startsWith(HASH)) continue;
 
-      System.out.printf(LOADED_POLLING_INTERVALS, ipTable.size());
+             var temp = url.split(COMMA);
+             if (temp.length < 2)
+             {
+               System.err.println("Skipping invalid line (missing interval): " + url);
+               continue;
+             }
 
-      // Pre-create timer messages (reusable)
-      Map<Byte, JsonObject> timerMessages = new HashMap<>();
+             var ip = temp[0].strip();
+             var pollTime = Integer.parseInt(temp[1].strip());
 
-      // Create periodic timers for each poll interval
-      for (var ipByTime : ipTable.entrySet())
-      {
-        byte pollInterval = ipByTime.getKey();
 
-        // Create and cache the timer message
-        JsonObject timerMsg = new JsonObject().put(DATA, pollInterval);
-        timerMessages.put(pollInterval, timerMsg);
+             ipTable.computeIfAbsent(pollTime, k -> new HashSet<>())
+                    .add(ip);
+           }
 
-        long intervalMs = pollInterval * 1000L;
-        long initialDelayMs = intervalMs / 2;
+           var pollTimes = new TreeSet<>(ipTable.keySet());
+           gcdMap = new HashMap<>();
 
-        // System.out.println("Starting timer for " + ipByTime.getValue().size() + " IPs at " + pollInterval + "s interval");
-        System.out.printf("Starting timer for %s IPs at %ss interval\n", ipByTime.getValue().size(), pollInterval);
+           for (var pt : pollTimes)
+           {
+             var devideableList = gcdMap.keySet()
+                                        .stream()
+                                        .filter(pollT -> pt % pollT == 0)
+                                        .toList()
+               ;
 
-        // Reuse the cached message
-        vertx.setPeriodic(initialDelayMs, intervalMs, id -> vertx.eventBus().publish(TIMER_EXPIRED, timerMsg));
+             if (!devideableList.isEmpty())
+             {
+               var dividableKey = devideableList.get(new Random().nextInt(devideableList.size()));
+               gcdMap.get(dividableKey)
+                     .put(pt / dividableKey, ipTable.get(pt));
 
-      }
-    });
+             } else
+             {
+               gcdMap.computeIfAbsent(pt, k -> new HashMap<>())
+                     .put(1, ipTable.get(pt));
+             }
+           }
+
+           gcdMap.keySet()
+                 .forEach(Key -> gcdTicks.put(Key, 0));
+
+
+           System.out.printf(LOADED_POLLING_INTERVALS, gcdMap.size());
+
+
+           // Create periodic timers for each poll interval
+           for (var gcdToMultipleToIpSet : gcdMap.entrySet())
+           {
+             var pollInterval = gcdToMultipleToIpSet.getKey();
+
+             // Create and cache the timer message
+             JsonObject timerMsg = new JsonObject().put(DATA, pollInterval);
+
+             var intervalMs = pollInterval * 1000L;
+             var initialDelayMs = intervalMs / 2;
+
+             // System.out.println("Starting timer for " + gcdToMultipleToIpSet.getValue().size() + " IPs at " + pollInterval + "s interval");
+             System.out.printf("Starting timer for %s IP(groups)s at %ss interval\n", gcdToMultipleToIpSet.getValue()
+                                                                                                          .size(), pollInterval);
+
+             // Reuse the cached message
+             vertx.setPeriodic(initialDelayMs, intervalMs, id -> vertx.eventBus()
+                                                                      .publish(TIMER_EXPIRED, timerMsg));
+
+           }
+         });
     return Future.succeededFuture();
   }
 

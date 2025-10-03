@@ -11,16 +11,16 @@ public class PingResult
   public static final String UP = "UP";
   public static final String DOWN = "DOWN";
   private final String ip;
-  private final boolean isAlive;
+  private final boolean isSuccess;
   private final double minRtt;      // milliseconds
   private final double avgRtt;      // milliseconds
   private final double maxRtt;      // milliseconds
   private final int packetLoss;     // percentage (0-100)
 
-  public PingResult(String ip, boolean isAlive, double minRtt, double avgRtt, double maxRtt, int packetLoss)
+  public PingResult(String ip, boolean isSuccess, double minRtt, double avgRtt, double maxRtt, int packetLoss)
   {
     this.ip = ip;
-    this.isAlive = isAlive;
+    this.isSuccess = isSuccess;
     this.minRtt = minRtt;
     this.avgRtt = avgRtt;
     this.maxRtt = maxRtt;
@@ -40,9 +40,9 @@ public class PingResult
     return ip;
   }
 
-  public boolean isAlive()
+  public boolean isSuccess()
   {
-    return isAlive;
+    return isSuccess;
   }
 
   /**
@@ -50,8 +50,8 @@ public class PingResult
    */
   public String toCsvRow()
   {
-    String status = isAlive ? UP : DOWN;
-    if (isAlive)
+    String status = isSuccess ? UP : DOWN;
+    if (isSuccess)
     {
       return String.format(CSV_FORMAT_UP, ip, status, packetLoss, minRtt, avgRtt, maxRtt);
     } else
@@ -63,6 +63,6 @@ public class PingResult
   @Override
   public String toString()
   {
-    return "PingResult{" + "ip='" + ip + '\'' + ", isAlive=" + isAlive + ", avgRtt=" + avgRtt + ", packetLoss=" + packetLoss + '}';
+    return "PingResult{" + "ip='" + ip + '\'' + ", isAlive=" + isSuccess + ", avgRtt=" + avgRtt + ", packetLoss=" + packetLoss + '}';
   }
 }

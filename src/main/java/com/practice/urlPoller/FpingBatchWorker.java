@@ -7,15 +7,14 @@ import io.vertx.core.json.JsonObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+import static com.practice.urlPoller.Constants.Event.PROCESS_FAILED;
+import static com.practice.urlPoller.Constants.Event.PROCESS_SUCCEEDED;
 import static com.practice.urlPoller.Constants.JsonFields.*;
-import static com.practice.urlPoller.Events.Event.PROCESS_FAILED;
-import static com.practice.urlPoller.Events.Event.PROCESS_SUCCEEDED;
 
 /**
  * Batch ping executor using fping for high-performance concurrent ping operations.
@@ -53,7 +52,7 @@ public class FpingBatchWorker
    * @param pollInterval The polling interval for this batch (for logging)
    * @return Future containing map of IP -> PingResult
    */
-  public static Future<Map<String, PingResult>> work(Vertx vertx, Set<String> ipAddresses, byte pollInterval)
+  public static Future<Map<String, PingResult>> work(Vertx vertx, Set<String> ipAddresses, Integer pollInterval)
   {
     if (ipAddresses == null || ipAddresses.isEmpty())
     {
@@ -71,7 +70,8 @@ public class FpingBatchWorker
     // Execute blocking fping operation on worker pool using Callable
     return fpingPool.executeBlocking(() -> {
       // This executes on one of the 6 worker threads
-      Thread.currentThread().setName(FPING_BATCH + pollInterval);
+      Thread.currentThread()
+            .setName(FPING_BATCH + pollInterval);
 
       // Build fping command with all IPs
       List<String> command = buildFpingCommand(ipAddresses);
@@ -91,7 +91,7 @@ public class FpingBatchWorker
           proc.destroyForcibly();
           System.err.printf(FPING_BATCH_TIMED_OUT_FOR_INTERVAL_WITH_IPS, pollInterval, ipAddresses.size());
           publishBatchTimeout(vertx, ipAddresses, pollInterval);
-          return new ConcurrentHashMap<String, PingResult>();
+          return new ConcurrentHashMap<>();
         }
 
         // Process completed - read output
@@ -101,7 +101,7 @@ public class FpingBatchWorker
         {
           System.err.println(EMPTY_OUTPUT_FROM_FPING_BATCH_FOR_INTERVAL + pollInterval);
           publishBatchTimeout(vertx, ipAddresses, pollInterval);
-          return new ConcurrentHashMap<String, PingResult>();
+          return new ConcurrentHashMap<>();
         }
 
         // Parse fping output (concurrent parsing with ConcurrentHashMap)
@@ -110,29 +110,36 @@ public class FpingBatchWorker
         System.out.printf(FPING_BATCH_COMPLETED_IPS_PARSED_FOR_INTERVAL, results.size(), ipAddresses.size(), pollInterval);
 
         // Publish events for each IP concurrently using parallel stream
-        results.entrySet().parallelStream().forEach(entry -> publishResult(vertx, entry.getValue(), pollInterval));
+        results.entrySet()
+               .parallelStream()
+               .forEach(entry -> publishResult(vertx, entry.getValue(), pollInterval))
+        ;
 
         // Handle any IPs that weren't in the parsed results
-        ipAddresses.stream().filter(ip -> !results.containsKey(ip)).forEach(ip -> {
-          System.err.println(IP_NOT_IN_FPING_RESULTS + ip);
-          publishMissingIp(vertx, ip, pollInterval);
-        });
+        ipAddresses.stream()
+                   .filter(ip -> !results.containsKey(ip))
+                   .forEach(ip -> {
+                     System.err.println(IP_NOT_IN_FPING_RESULTS + ip);
+                     publishMissingIp(vertx, ip, pollInterval);
+                   })
+        ;
 
         return results;
 
       } catch (IOException ioException)
       {
         System.err.println(FAILED_TO_START_FPING_PROCESS);
-        ioException.printStackTrace();
+//        ioException.printStackTrace();
         publishBatchTimeout(vertx, ipAddresses, pollInterval);
-        return new ConcurrentHashMap<String, PingResult>();
+        return new ConcurrentHashMap<>();
       } catch (InterruptedException interruptedException)
       {
         System.err.println("Fping process interrupted");
-        interruptedException.printStackTrace();
+//        interruptedException.printStackTrace();
         publishBatchTimeout(vertx, ipAddresses, pollInterval);
-        Thread.currentThread().interrupt();
-        return new ConcurrentHashMap<String, PingResult>();
+        Thread.currentThread()
+              .interrupt();
+        return new ConcurrentHashMap<>();
       }
     }, false);  // ordered=false for better parallelism
   }
@@ -168,12 +175,13 @@ public class FpingBatchWorker
       String line;
       while ((line = reader.readLine()) != null)
       {
-        output.append(line).append('\n');
+        output.append(line)
+              .append('\n');
       }
     } catch (IOException ioException)
     {
       System.err.println(ERROR_READING_FPING_OUTPUT);
-      ioException.printStackTrace();
+//      ioException.printStackTrace();
     }
 
     return output.toString();
@@ -183,30 +191,75 @@ public class FpingBatchWorker
    * Publish event for a single ping result.
    * Thread-safe - can be called concurrently from parallel stream.
    */
-  private static void publishResult(Vertx vertx, PingResult result, byte pollInterval)
+  private static void publishResult(Vertx vertx, PingResult result, int pollInterval)
   {
-    var json = new JsonObject().put(FILE_NAME, result.getIp()).put(DATA, result.toCsvRow())  // CSV format for new output
-      .put(EXIT_CODE, result.isAlive() ? 0 : 1).put(POLL_INTERVAL, pollInterval);
+    var json = new JsonObject().put(FILE_NAME, result.getIp())
+                               .put(DATA, result.toCsvRow())  // CSV format for new output
+                               .put(EXIT_CODE, result.isSuccess() ? 0 : 1)
+                               .put(POLL_INTERVAL, pollInterval)
+      ;
 
-    vertx.eventBus().publish(result.isAlive() ? PROCESS_SUCCEEDED : PROCESS_FAILED, json);
+    vertx.eventBus()
+         .publish(result.isSuccess() ? PROCESS_SUCCEEDED : PROCESS_FAILED, json);
   }
 
   /**
    * Publish timeout failure for all IPs in a batch.
    * Thread-safe - uses parallel stream.
    */
-  private static void publishBatchTimeout(Vertx vertx, Set<String> ipAddresses, byte pollInterval)
+  private static void publishBatchTimeout(Vertx vertx, Set<String> ipAddresses, int pollInterval)
   {
-    ipAddresses.parallelStream().forEach(ip -> vertx.eventBus().publish(PROCESS_FAILED, new JsonObject().put(FILE_NAME, ip).put(DATA, ip + TIMEOUT_100).put(EXIT_CODE, -1).put(POLL_INTERVAL, pollInterval)
-    ));
+    ipAddresses.parallelStream()
+               .forEach(ip -> vertx.eventBus()
+                                   .publish(PROCESS_FAILED, new JsonObject().put(FILE_NAME, ip)
+                                                                            .put(DATA, ip + TIMEOUT_100)
+                                                                            .put(EXIT_CODE, -1)
+                                                                            .put(POLL_INTERVAL, pollInterval)
+                                   ));
   }
 
   /**
    * Publish failure for IP that was missing from fping results.
    * Thread-safe.
    */
-  private static void publishMissingIp(Vertx vertx, String ip, byte pollInterval)
+  private static void publishMissingIp(Vertx vertx, String ip, int pollInterval)
   {
-    vertx.eventBus().publish(PROCESS_FAILED, new JsonObject().put(FILE_NAME, ip).put(DATA, ip + ERROR_100).put(EXIT_CODE, -1).put(POLL_INTERVAL, pollInterval));
+    vertx.eventBus()
+         .publish(PROCESS_FAILED, new JsonObject().put(FILE_NAME, ip)
+                                                  .put(DATA, ip + ERROR_100)
+                                                  .put(EXIT_CODE, -1)
+                                                  .put(POLL_INTERVAL, pollInterval));
+  }
+
+  public static Future<Map<String, PingResult>> work(Vertx vertx, Map<Integer, Set<String>> gcdGroup, int timer, int tick)
+  {
+    System.out.println();
+    System.out.println();
+    System.out.println("FpingBatchWorker.work///");
+    var candidateIds = gcdGroup.keySet()
+                               .stream()
+                               .map(Key -> Key % tick == 0 ? Key : -1)
+                               .collect(Collectors.toSet())
+      ;
+
+    candidateIds.remove(-1);
+
+    var candidateSet = new HashSet<String>();
+
+    for (var candidate : candidateIds)
+    {
+      var kk = gcdGroup.get(candidate);
+      candidateSet.addAll(kk);
+    }
+
+
+    System.out.println("tick = " + tick);
+    System.out.println("timer = " + timer);
+    System.out.println("candidateSet = " + candidateSet);
+
+    System.out.println("FpingBatchWorker.work///");
+    System.out.println();
+    System.out.println();
+    return work(vertx, candidateSet, timer);
   }
 }
