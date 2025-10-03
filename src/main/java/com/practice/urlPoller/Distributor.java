@@ -1,18 +1,18 @@
 package com.practice.urlPoller;
 
 
-import static com.practice.urlPoller.Constants.JsonFields.DATA;
-import static com.practice.urlPoller.Events.Event.CONFIG_LOADED;
-import static com.practice.urlPoller.Events.Event.TIMER_EXPIRED;
+import io.vertx.core.Future;
+import io.vertx.core.VerticleBase;
+import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import io.vertx.core.Future;
-import io.vertx.core.VerticleBase;
-import io.vertx.core.json.JsonObject;
+import static com.practice.urlPoller.Constants.JsonFields.DATA;
+import static com.practice.urlPoller.Events.Event.CONFIG_LOADED;
+import static com.practice.urlPoller.Events.Event.TIMER_EXPIRED;
 
 public class Distributor extends VerticleBase
 {
@@ -46,9 +46,9 @@ public class Distributor extends VerticleBase
 
       // Batch execution using fping for high performance
       // Single process handles all IPs in this interval group
-      var cf = FpingBatchWorker.work(vertx, set, timer);
+      var future = FpingBatchWorker.work(vertx, set, timer);
 
-      Future.fromCompletionStage(cf).onComplete(_future -> {
+      future.onComplete(_future -> {
         if (_future.succeeded())
         {
           System.out.printf(COMPLETED_FPING_BATCH_IPS_FOR_INTERVAL, set.size(), timer);
@@ -111,6 +111,7 @@ public class Distributor extends VerticleBase
 
         // Reuse the cached message
         vertx.setPeriodic(initialDelayMs, intervalMs, id -> vertx.eventBus().publish(TIMER_EXPIRED, timerMsg));
+
       }
     });
     return Future.succeededFuture();

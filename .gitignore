@@ -201,3 +201,4 @@ test_parallel_performance.txt
 test_scaling.sh
 test_thread_names.sh
 verify_installation.sh
+backup.20251003_132525
