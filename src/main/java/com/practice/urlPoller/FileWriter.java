@@ -52,7 +52,7 @@ public class FileWriter extends VerticleBase
     vertx.eventBus()
          .consumer(PROCESS_FAILED, message -> {
            var json = (JsonObject) message.body();
-           String ip = json.getString(FILE_NAME);
+           var ip = json.getString(FILE_NAME);
            long batchId = json.getLong("batchId", -1L);
 
            logger.debug("[Batch:{}][IP:{}] PROCESS_FAILED event received", batchId, ip);
@@ -68,8 +68,8 @@ public class FileWriter extends VerticleBase
     vertx.eventBus()
          .consumer(PROCESS_SUCCEEDED, message -> {
            var json = (JsonObject) message.body();
-           String ip = json.getString(FILE_NAME);
-           long batchId = json.getLong("batchId", -1L);
+           var ip = json.getString(FILE_NAME);
+           var batchId = json.getLong("batchId", -1L);
 
            // Option C - Whitelist logging:
            if (LogConfig.shouldLogIp(ip)) {
@@ -93,28 +93,26 @@ public class FileWriter extends VerticleBase
    */
   private void writeCsvRow(String fileName, String csvRow, long batchId)
   {
-    long startNs = System.nanoTime();
-    String filePath = FILE_PARENT + fileName + CSV_EXTENSION;
+    var startNs = System.nanoTime();
+    var filePath = FILE_PARENT + fileName + CSV_EXTENSION;
 
     // Check if file needs initialization with header (thread-safe)
-    boolean needsHeader = initializedFiles.add(fileName);  // Returns true if newly added
+    var needsHeader = initializedFiles.add(fileName);  // Returns true if newly added
 
     vertx.fileSystem()
          .open(filePath, new OpenOptions().setAppend(true)
                                           .setCreate(true))
-         .onFailure(error -> {
-           logger.error("[Batch:{}][IP:{}] File write failed: path={}, error={}",
-               batchId, fileName, filePath, error.getMessage(), error);
-         })
+         .onFailure(error -> logger.error("[Batch:{}][IP:{}] File write failed: path={}, error={}",
+             batchId, fileName, filePath, error.getMessage(), error))
          .onSuccess(file -> {
-           long durationMs = (System.nanoTime() - startNs) / 1_000_000;
+           var durationMs = (System.nanoTime() - startNs) / 1_000_000;
 
            if (LogConfig.shouldLogIp(fileName)) {
              logger.trace("[Batch:{}][IP:{}] File opened: path={}, duration={}ms",
                  batchId, fileName, filePath, durationMs);
            }
 
-           Buffer buffer = Buffer.buffer();
+           var buffer = Buffer.buffer();
 
            // Add header if this is the first write to this file
            if (needsHeader)
@@ -123,10 +121,10 @@ public class FileWriter extends VerticleBase
            }
 
            // Add timestamp + CSV data
-           String timestamp = LocalDateTime.now()
-                                           .format(TIMESTAMP_FORMATTER);
-           long epochMs = System.currentTimeMillis();
-           String csvLine = String.format(S_D_S, timestamp, epochMs, csvRow);
+           var timestamp = LocalDateTime.now()
+                                        .format(TIMESTAMP_FORMATTER);
+           var epochMs = System.currentTimeMillis();
+           var csvLine = String.format(S_D_S, timestamp, epochMs, csvRow);
 
            buffer.appendString(csvLine);
 
@@ -134,7 +132,7 @@ public class FileWriter extends VerticleBase
            file.write(buffer)
                .compose(v -> file.flush())
                .onComplete(writeResult -> {
-                 long totalDurationMs = (System.nanoTime() - startNs) / 1_000_000;
+                 var totalDurationMs = (System.nanoTime() - startNs) / 1_000_000;
 
                  if (LogConfig.shouldLogIp(fileName)) {
                    logger.trace("[Batch:{}][IP:{}] Write completed: bytes={}, duration={}ms",

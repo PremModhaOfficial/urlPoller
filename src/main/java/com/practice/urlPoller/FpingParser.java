@@ -74,7 +74,7 @@ public class FpingParser
    */
   private static PingResult parseLine(String line)
   {
-    Matcher matcher = FPING_PATTERN.matcher(line);
+    var matcher = FPING_PATTERN.matcher(line);
 
     if (!matcher.find())
     {
@@ -84,18 +84,18 @@ public class FpingParser
 
     try
     {
-      String ip = matcher.group(1);
-      int packetsReceived = Integer.parseInt(matcher.group(3));
-      int packetLoss = Integer.parseInt(matcher.group(4));
+      var ip = matcher.group(1);
+      var packetsReceived = Integer.parseInt(matcher.group(3));
+      var packetLoss = Integer.parseInt(matcher.group(4));
 
-      boolean isAlive = packetsReceived > 0;
+      var isAlive = packetsReceived > 0;
 
       // RTT values are only present if host responded
       if (isAlive && matcher.group(5) != null)
       {
-        double minRtt = Double.parseDouble(matcher.group(5));
-        double avgRtt = Double.parseDouble(matcher.group(6));
-        double maxRtt = Double.parseDouble(matcher.group(7));
+        var minRtt = Double.parseDouble(matcher.group(5));
+        var avgRtt = Double.parseDouble(matcher.group(6));
+        var maxRtt = Double.parseDouble(matcher.group(7));
 
         return new PingResult(ip, true, minRtt, avgRtt, maxRtt,
           packetLoss);

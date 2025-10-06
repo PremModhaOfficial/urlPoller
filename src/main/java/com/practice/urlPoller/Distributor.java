@@ -48,7 +48,7 @@ public class Distributor extends VerticleBase
             var timer = json.getInteger(DATA);
 
             // Generate batch ID for correlation
-            long batchId = LogConfig.generateBatchId();
+            var batchId = LogConfig.generateBatchId();
 
             var gcdGroup = gcdMap.get(timer);
 
@@ -60,20 +60,19 @@ public class Distributor extends VerticleBase
 
             // Calculate expected timing (for gap detection)
             int currentTick = gcdTicks.get(timer);
-            int nextTick = currentTick + 1;
+            var nextTick = currentTick + 1;
             gcdTicks.put(timer, nextTick);
 
             // Log which multipliers are active this tick:
-            var activeMultipliers = gcdGroup.entrySet().stream()
-                .filter(e -> nextTick % e.getKey() == 0)
-                .map(Map.Entry::getKey)
-                .toList();
+            var activeMultipliers = gcdGroup.keySet().stream()
+                                            .filter(integer -> nextTick % integer == 0)
+                                            .toList();
 
             // Calculate expected IPs:
-            int expectedIps = gcdGroup.entrySet().stream()
-                .filter(e -> nextTick % e.getKey() == 0)
-                .mapToInt(e -> e.getValue().size())
-                .sum();
+            var expectedIps = gcdGroup.entrySet().stream()
+                                      .filter(e -> nextTick % e.getKey() == 0)
+                                      .mapToInt(e -> e.getValue().size())
+                                      .sum();
 
             logger.info("[Batch:{}] Timer fired: interval={}s, tick={}, activeMultipliers={}, expectedIps={}",
                 batchId, timer, nextTick, activeMultipliers, expectedIps);
@@ -83,9 +82,9 @@ public class Distributor extends VerticleBase
               for (var entry : gcdGroup.entrySet()) {
                 if (nextTick % entry.getKey() == 0) {
                   int multiplier = entry.getKey();
-                  int actualInterval = timer * multiplier;
+                  var actualInterval = timer * multiplier;
 
-                  for (String ip : entry.getValue()) {
+                  for (var ip : entry.getValue()) {
                     if (LogConfig.shouldLogIp(ip)) {
                       logger.trace("[Batch:{}][IP:{}] Scheduled: gcd={}s, mult={}, interval={}s, tick={}",
                           batchId, ip, timer, multiplier, actualInterval, nextTick);
@@ -96,11 +95,11 @@ public class Distributor extends VerticleBase
             }
 
             // Batch execution using fping for high performance
-            long batchStartNs = System.nanoTime();
+            var batchStartNs = System.nanoTime();
 
             FpingWorker.work(vertx, gcdGroup, timer, nextTick, batchId)
                        .onComplete(future -> {
-                         long durationMs = (System.nanoTime() - batchStartNs) / 1_000_000;
+                         var durationMs = (System.nanoTime() - batchStartNs) / 1_000_000;
 
                          if (future.succeeded())
                          {
@@ -118,10 +117,8 @@ public class Distributor extends VerticleBase
                                batchId, timer, future.cause().getMessage(), future.cause());
                          }
                        })
-                       .onFailure(throwable -> {
-                         logger.error("[Batch:{}] Unexpected failure in batch processing",
-                             batchId, throwable);
-                       });
+                       .onFailure(throwable -> logger.error("[Batch:{}] Unexpected failure in batch processing",
+                           batchId, throwable));
           });
 
     vertx.eventBus()
@@ -134,10 +131,10 @@ public class Distributor extends VerticleBase
             ipTable = new HashMap<>();
 
             // Track all IPs to detect duplicates across different intervals
-            int totalLines = 0;
-            int validLines = 0;
-            int commentLines = 0;
-            int invalidLines = 0;
+            var totalLines = 0;
+            var validLines = 0;
+            var commentLines = 0;
+            var invalidLines = 0;
 
             for (var url : urls)
             {
@@ -145,7 +142,7 @@ public class Distributor extends VerticleBase
               if (url.isBlank()) continue; // Skip empty lines
 
               // Skip comment lines
-              String trimmed = url.trim();
+              var trimmed = url.trim();
               if (trimmed.startsWith(HASH)) {
                 commentLines++;
                 continue;
@@ -175,7 +172,7 @@ public class Distributor extends VerticleBase
             gcdMap = new HashMap<>();
 
             // Log IP distribution before GCD calculation
-            int totalIps = ipTable.values().stream().mapToInt(Set::size).sum();
+            var totalIps = ipTable.values().stream().mapToInt(Set::size).sum();
             logger.info("Parsed {} IPs across {} unique poll intervals", totalIps, ipTable.size());
 
             for (var entry : ipTable.entrySet()) {
@@ -215,7 +212,7 @@ public class Distributor extends VerticleBase
             for (var gcdEntry : gcdMap.entrySet()) {
               int gcd = gcdEntry.getKey();
               var multiplierMap = gcdEntry.getValue();
-              int totalIpsInGcd = multiplierMap.values().stream().mapToInt(Set::size).sum();
+              var totalIpsInGcd = multiplierMap.values().stream().mapToInt(Set::size).sum();
 
               logger.info("GCD={}s: {} IPs across {} multipliers",
                   gcd, totalIpsInGcd, multiplierMap.size());
@@ -234,13 +231,13 @@ public class Distributor extends VerticleBase
               var pollInterval = gcdToMultipleToIpSet.getKey();
 
               // Create and cache the timer message
-              JsonObject timerMsg = new JsonObject().put(DATA, pollInterval);
+              var timerMsg = new JsonObject().put(DATA, pollInterval);
 
               var intervalMs = pollInterval * 1000L;
               var initialDelayMs = intervalMs / 2;
 
-              int totalIpsInTimer = gcdToMultipleToIpSet.getValue().values()
-                  .stream().mapToInt(Set::size).sum();
+              var totalIpsInTimer = gcdToMultipleToIpSet.getValue().values()
+                                                        .stream().mapToInt(Set::size).sum();
 
               logger.info("Timer created: interval={}s ({}ms), initialDelay={}ms, IPs={}",
                   pollInterval, intervalMs, initialDelayMs, totalIpsInTimer);

@@ -70,7 +70,7 @@ public class PingResult
    */
   public String toCsvRow()
   {
-    String status = isSuccess ? UP : DOWN;
+    var status = isSuccess ? UP : DOWN;
     if (isSuccess)
     {
       return String.format(CSV_FORMAT_UP, ip, status, packetLoss, minRtt, avgRtt, maxRtt);

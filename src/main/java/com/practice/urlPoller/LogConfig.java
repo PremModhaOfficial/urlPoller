@@ -28,7 +28,7 @@ public class LogConfig {
      */
     public static void loadWhitelist(String csvIps) {
         if (csvIps != null && !csvIps.isBlank()) {
-            for (String ip : csvIps.split(",")) {
+            for (var ip : csvIps.split(",")) {
                 whitelistedIps.add(ip.strip());
             }
             logger.info("Loaded {} IPs to whitelist", whitelistedIps.size());
@@ -59,11 +59,11 @@ public class LogConfig {
      */
     public static void loadWhitelistFromFile(String filePath) {
         try {
-            java.nio.file.Path path = java.nio.file.Paths.get(filePath);
-            java.util.List<String> lines = java.nio.file.Files.readAllLines(path);
+          var path = java.nio.file.Paths.get(filePath);
+          var lines = java.nio.file.Files.readAllLines(path);
 
-            for (String line : lines) {
-                String trimmed = line.trim();
+            for (var line : lines) {
+              var trimmed = line.trim();
                 if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
                     whitelistedIps.add(trimmed);
                 }

@@ -71,7 +71,7 @@ public class FpingWorker
       return Future.succeededFuture(new ConcurrentHashMap<>());
     }
 
-    WorkerExecutor fpingPool = Main.getFpingWorkerPool();
+    var fpingPool = Main.getFpingWorkerPool();
     if (fpingPool == null)
     {
       logger.error("[Batch:{}] Worker pool not initialized", batchId);
@@ -91,7 +91,7 @@ public class FpingWorker
 
       // Option C - Log selected IPs (whitelist only):
       if (logger.isTraceEnabled()) {
-        for (String ip : ipAddresses) {
+        for (var ip : ipAddresses) {
           if (LogConfig.shouldLogIp(ip)) {
             logger.trace("[Batch:{}][IP:{}] Added to batch", batchId, ip);
           }
@@ -99,24 +99,24 @@ public class FpingWorker
       }
 
       // Build fping command with all IPs
-      List<String> command = buildFpingCommand(ipAddresses);
+      var command = buildFpingCommand(ipAddresses);
       logger.debug("[Batch:{}] Command: {} (args count={})",
           batchId, String.join(" ", command.subList(0, 6)) + " ...", command.size());
 
-      ProcessBuilder processBuilder = new ProcessBuilder(command);
+      var processBuilder = new ProcessBuilder(command);
       processBuilder.redirectErrorStream(true);  // Merge stderr into stdout
 
-      long processStartNs = System.nanoTime();
+      var processStartNs = System.nanoTime();
       logger.debug("[Batch:{}] Starting fping process...", batchId);
 
       try
       {
-        Process proc = processBuilder.start();
+        var proc = processBuilder.start();
         logger.info("[Batch:{}] Process started: pid={}, timeout=6s",
             batchId, proc.pid());
 
         // Wait for process completion with timeout
-        boolean completed = proc.waitFor(6, TimeUnit.SECONDS);
+        var completed = proc.waitFor(6, TimeUnit.SECONDS);
 
         if (!completed)
         {
@@ -129,14 +129,14 @@ public class FpingWorker
         }
 
         // Process completed - read output
-        long processDurationMs = (System.nanoTime() - processStartNs) / 1_000_000;
-        int exitCode = proc.exitValue();
+        var processDurationMs = (System.nanoTime() - processStartNs) / 1_000_000;
+        var exitCode = proc.exitValue();
         logger.info("[Batch:{}] Process completed: exitCode={}, duration={}ms",
             batchId, exitCode, processDurationMs);
 
-        long parseStartNs = System.nanoTime();
-        String output = readProcessOutput(proc);
-        long readDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
+        var parseStartNs = System.nanoTime();
+        var output = readProcessOutput(proc);
+        var readDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
 
         logger.debug("[Batch:{}] Output read: size={}bytes, duration={}ms",
             batchId, output.length(), readDurationMs);
@@ -150,21 +150,21 @@ public class FpingWorker
 
         // Parse fping output (concurrent parsing with ConcurrentHashMap)
         parseStartNs = System.nanoTime();
-        Map<String, PingResult> results = FpingParser.parse(output, batchId);
-        long parseDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
+        var results = FpingParser.parse(output, batchId);
+        var parseDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
 
         logger.info("[Batch:{}] Parsing completed: parsed={}/{}, duration={}ms",
             batchId, results.size(), ipAddresses.size(), parseDurationMs);
 
         // Publish events for each IP concurrently using parallel stream
-        long publishStartNs = System.nanoTime();
+        var publishStartNs = System.nanoTime();
 
         results.entrySet().parallelStream().forEach(entry -> {
           publishResult(vertx, entry.getValue(), pollInterval, batchId);
 
           // Option C - Per-IP result logging:
           if (LogConfig.shouldLogIp(entry.getKey())) {
-            PingResult result = entry.getValue();
+            var result = entry.getValue();
             logger.trace("[Batch:{}][IP:{}] Parsed: status={}, loss={}%, rtt={}ms",
                 batchId, entry.getKey(),
                 result.isSuccess() ? "UP" : "DOWN",
@@ -173,7 +173,7 @@ public class FpingWorker
           }
         });
 
-        long publishDurationMs = (System.nanoTime() - publishStartNs) / 1_000_000;
+        var publishDurationMs = (System.nanoTime() - publishStartNs) / 1_000_000;
         logger.debug("[Batch:{}] Publishing completed: events={}, duration={}ms",
             batchId, results.size(), publishDurationMs);
 
@@ -227,9 +227,9 @@ public class FpingWorker
    */
   private static String readProcessOutput(Process process)
   {
-    StringBuilder output = new StringBuilder(2048);
+    var output = new StringBuilder(2048);
 
-    try (BufferedReader reader = new BufferedReader(process.inputReader(), 8192))
+    try (var reader = new BufferedReader(process.inputReader(), 8192))
     {
       String line;
       while ((line = reader.readLine()) != null)

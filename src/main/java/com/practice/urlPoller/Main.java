@@ -81,8 +81,8 @@ public class Main
                   vertx.eventBus().publish(CONFIG_LOADED, json);
 
                   // Load whitelist after config is loaded
-                  String whitelistCsv = System.getProperty("ip.whitelist", "");
-                  String whitelistFile = System.getProperty("ip.whitelist.file", "");
+                  var whitelistCsv = System.getProperty("ip.whitelist", "");
+                  var whitelistFile = System.getProperty("ip.whitelist.file", "");
 
                   if (!whitelistFile.isEmpty()) {
                       LogConfig.loadWhitelistFromFile(whitelistFile);
