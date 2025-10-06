@@ -233,16 +233,15 @@ public class FpingBatchWorker
 
   public static Future<Map<String, PingResult>> work(Vertx vertx, Map<Integer, Set<String>> gcdGroup, int timer, int tick)
   {
-    System.out.println();
-    System.out.println();
-    System.out.println("FpingBatchWorker.work///");
     var candidateIds = gcdGroup.keySet()
                                .stream()
                                .map(Key -> Key % tick == 0 ? Key : -1)
-                               .collect(Collectors.toSet())
+                               .filter(Key -> Key != -1)
+                               .collect(
+                                 Collectors.toSet()
+                               )
       ;
 
-    candidateIds.remove(-1);
 
     var candidateSet = new HashSet<String>();
 
@@ -252,14 +251,6 @@ public class FpingBatchWorker
       candidateSet.addAll(kk);
     }
 
-
-    System.out.println("tick = " + tick);
-    System.out.println("timer = " + timer);
-    System.out.println("candidateSet = " + candidateSet);
-
-    System.out.println("FpingBatchWorker.work///");
-    System.out.println();
-    System.out.println();
     return work(vertx, candidateSet, timer);
   }
 }
