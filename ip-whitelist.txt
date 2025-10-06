@@ -1,0 +1,8 @@
+# IP Whitelist for Detailed Logging
+# One IP per line, comments start with #
+# Use with: java -Dip.whitelist.file=ip-whitelist.txt -Dip.trace=TRACE ...
+
+# Problematic IPs you're debugging
+youtube.com
+
+# Empty file = log all IPs (development mode)

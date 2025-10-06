@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console Appender with color-coded levels -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Async Console Appender (ZERO performance impact) -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- Root logger: INFO level for general operation -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE" />
+    </root>
+
+    <!-- Detailed logging for our application -->
+    <logger name="com.practice.urlPoller" level="DEBUG" />
+
+    <!-- Per-IP tracing (enable with -Dip.trace=true) -->
+    <!-- Set to TRACE for Option C logging -->
+    <logger name="com.practice.urlPoller.Distributor" level="${ip.trace:-DEBUG}" />
+    <logger name="com.practice.urlPoller.FpingWorker" level="${ip.trace:-DEBUG}" />
+    <logger name="com.practice.urlPoller.FileWriter" level="${ip.trace:-DEBUG}" />
+
+    <!-- Quiet down Vert.x internal logging -->
+    <logger name="io.vertx" level="WARN" />
+    <logger name="io.netty" level="WARN" />
+</configuration>

@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Parser for fping output format using concurrent parsing for large result sets.
  * Thread-safe implementation using ConcurrentHashMap.
@@ -15,6 +18,8 @@ import java.util.regex.Pattern;
  */
 public class FpingParser
 {
+  private static final Logger logger = LoggerFactory.getLogger(FpingParser.class);
+
   // Pattern to match fping output line
   // Group 1: IP address
   // Group 2: packets sent (xmt)
@@ -30,14 +35,18 @@ public class FpingParser
    * Thread-safe using ConcurrentHashMap.
    *
    * @param fpingOutput The complete stdout from fping command
+   * @param batchId     Unique batch ID for correlation
    * @return ConcurrentHashMap mapping each IP to its PingResult
    */
-  public static Map<String, PingResult> parse(String fpingOutput)
+  public static Map<String, PingResult> parse(String fpingOutput, long batchId)
   {
     if (fpingOutput == null || fpingOutput.isBlank())
     {
+      logger.debug("[Batch:{}] Empty fping output", batchId);
       return new ConcurrentHashMap<>();
     }
+
+    logger.debug("[Batch:{}] Parsing started: lines={}", batchId, fpingOutput.split("\n").length);
 
     // Use parallel stream for concurrent parsing of large result sets
 
@@ -69,7 +78,7 @@ public class FpingParser
 
     if (!matcher.find())
     {
-      System.err.println("Failed to parse fping line: " + line);
+      logger.warn("Failed to parse fping line: '{}'", line);
       return null;
     }
 
@@ -97,8 +106,7 @@ public class FpingParser
       }
     } catch (NumberFormatException numberFormatException)
     {
-      System.err.println("Failed to parse numbers in fping line: " + line);
-//      numberFormatException.printStackTrace();
+      logger.error("Failed to parse numbers in fping line: '{}', error={}", line, numberFormatException.getMessage());
       return null;
     }
   }

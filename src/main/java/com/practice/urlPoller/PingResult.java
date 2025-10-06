@@ -45,6 +45,26 @@ public class PingResult
     return isSuccess;
   }
 
+  public double getMinRtt()
+  {
+    return minRtt;
+  }
+
+  public double getAvgRtt()
+  {
+    return avgRtt;
+  }
+
+  public double getMaxRtt()
+  {
+    return maxRtt;
+  }
+
+  public int getPacketLoss()
+  {
+    return packetLoss;
+  }
+
   /**
    * Format result as CSV row: IP,Status,PacketLoss%,MinRTT,AvgRTT,MaxRTT
    */
