@@ -25,12 +25,8 @@ public class Distributor extends VerticleBase
   private static final Logger logger = LoggerFactory.getLogger(Distributor.class);
 
   public static final String LINE_BREAK = "\n";
-  public static final String NO_IPS_FOUND_FOR_TIMER_INTERVAL = "No IPs found for timer interval: ";
-  public static final String COMPLETED_FPING_BATCH_IPS_FOR_INTERVAL = "Completed fping batch: %s IPs for %ss interval\n";
-  public static final String FPING_BATCH_FAILED_FOR_INTERVAL = "Fping batch failed for %ss interval: %s\n";
   public static final String COMMA = ",";
   public static final String HASH = "#";
-  public static final String LOADED_POLLING_INTERVALS = "Loaded %s polling intervals (GCD)\n";
   private static final Map<Integer, Integer> gcdTicks = new ConcurrentHashMap<>();
   private static Map<Integer, Set<String>> ipTable;
   private static Map<Integer, Map<Integer, Set<String>>> gcdMap;
@@ -43,7 +39,7 @@ public class Distributor extends VerticleBase
     // Max execute time: 10 seconds (ping timeout is 5s, add buffer)
 
     vertx.eventBus()
-          .consumer(TIMER_EXPIRED, message -> {
+          .localConsumer(TIMER_EXPIRED, message -> {
             var json = (JsonObject) message.body();
             var timer = json.getInteger(DATA);
 
@@ -59,7 +55,7 @@ public class Distributor extends VerticleBase
             }
 
             // Calculate expected timing (for gap detection)
-            int currentTick = gcdTicks.get(timer);
+            var currentTick = gcdTicks.get(timer);
             var nextTick = currentTick + 1;
             gcdTicks.put(timer, nextTick);
 
@@ -81,7 +77,7 @@ public class Distributor extends VerticleBase
             if (logger.isTraceEnabled()) {
               for (var entry : gcdGroup.entrySet()) {
                 if (nextTick % entry.getKey() == 0) {
-                  int multiplier = entry.getKey();
+                  var multiplier = entry.getKey();
                   var actualInterval = timer * multiplier;
 
                   for (var ip : entry.getValue()) {
@@ -122,7 +118,7 @@ public class Distributor extends VerticleBase
           });
 
     vertx.eventBus()
-          .consumer(CONFIG_LOADED, message -> {
+          .localConsumer(CONFIG_LOADED, message -> {
             logger.info("CONFIG_LOADED event received, parsing IPs...");
 
             var json = (JsonObject) message.body();
@@ -210,7 +206,7 @@ public class Distributor extends VerticleBase
 
             // Log GCD structure (Option B - Batch level):
             for (var gcdEntry : gcdMap.entrySet()) {
-              int gcd = gcdEntry.getKey();
+              var gcd = gcdEntry.getKey();
               var multiplierMap = gcdEntry.getValue();
               var totalIpsInGcd = multiplierMap.values().stream().mapToInt(Set::size).sum();
 

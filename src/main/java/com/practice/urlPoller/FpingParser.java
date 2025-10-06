@@ -1,13 +1,13 @@
 package com.practice.urlPoller;
 
+import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Parser for fping output format using concurrent parsing for large result sets.
@@ -31,14 +31,14 @@ public class FpingParser
   );
 
   /**
-   * Parse fping output into a map of IP -> PingResult using parallel streams for performance.
+   * Parse fping output into a map of IP -> JsonObject using parallel streams for performance.
    * Thread-safe using ConcurrentHashMap.
    *
    * @param fpingOutput The complete stdout from fping command
    * @param batchId     Unique batch ID for correlation
-   * @return ConcurrentHashMap mapping each IP to its PingResult
+   * @return ConcurrentHashMap mapping each IP to its ping result JsonObject
    */
-  public static Map<String, PingResult> parse(String fpingOutput, long batchId)
+  public static Map<String, JsonObject> parse(String fpingOutput, long batchId)
   {
     if (fpingOutput == null || fpingOutput.isBlank())
     {
@@ -60,19 +60,19 @@ public class FpingParser
                       .filter(Objects::nonNull)  // Skip any parsing failures
                       .collect(
                         ConcurrentHashMap::new,  // Thread-safe map
-                        (map, result) -> map.put(result.getIp(), result),
+                        (map, result) -> map.put(result.getString(PingResultUtil.IP), result),
                         ConcurrentHashMap::putAll  // Thread-safe merge for parallel streams
                       );
   }
 
   /**
-   * Parse a single fping output line into a PingResult.
+   * Parse a single fping output line into a JsonObject.
    * Thread-safe - no shared state.
    *
    * @param line Single line from fping output
-   * @return PingResult or null if parsing fails
+   * @return JsonObject containing ping result or null if parsing fails
    */
-  private static PingResult parseLine(String line)
+  private static JsonObject parseLine(String line)
   {
     var matcher = FPING_PATTERN.matcher(line);
 
@@ -97,12 +97,11 @@ public class FpingParser
         var avgRtt = Double.parseDouble(matcher.group(6));
         var maxRtt = Double.parseDouble(matcher.group(7));
 
-        return new PingResult(ip, true, minRtt, avgRtt, maxRtt,
-          packetLoss);
+        return PingResultUtil.createSuccessResult(ip, minRtt, avgRtt, maxRtt, packetLoss);
       } else
       {
         // Host unreachable
-        return PingResult.unreachable(ip);
+        return PingResultUtil.createUnreachableResult(ip);
       }
     } catch (NumberFormatException numberFormatException)
     {

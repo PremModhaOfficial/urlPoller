@@ -19,7 +19,9 @@ def main [] {
     print "\n📋 Loading IP configurations..."
     let config = load-config $CONFIG_FILE
     print $"✅ Loaded ($config | length) IP configurations"
-    print $"First config: ($config | first)"
+    if ($config | length) > 0 {
+        print $"First config: ($config | first)"
+    }
 
     # Apply filters (none for now)
     let filtered_config = $config
@@ -27,7 +29,7 @@ def main [] {
 
     # Analyze polling intervals
     print "\n⏳ Analyzing polling intervals..."
-    let results = $filtered_config | par-each -t 10 {|entry|
+    let results = $filtered_config | par-each {|entry|
         try {
             analyze-ip $entry.ip $entry.expected_interval $STATS_DIR
         } catch {|err|
@@ -38,7 +40,7 @@ def main [] {
                 csv_exists: false,
                 sample_count: 0,
                 status: "ERROR",
-                message: $err.msg,
+                message: ($err | get msg? | default "Unknown error"),
                 mean_interval: null,
                 std_deviation: null,
                 variance_percent: null,
@@ -71,7 +73,7 @@ def load-config [file: string] {
     | where {|line| $line =~ ','}                        # Must contain comma
     | each {|line|
         # Handle both comma and tab separators
-        let parts = if $line =~ "\t" {
+        let parts = if ($line =~ "\t") {
             $line | split row "\t" | where {|p| $p != ""}
         } else {
             $line | split row ","
@@ -89,28 +91,6 @@ def load-config [file: string] {
     }
     | where {|row| $row != null}
     | sort-by ip
-}
-
-# Apply filters to configuration
-def apply-filters [config: list<record>, max_interval: int, ips: string] {
-    let filtered = $config
-
-    # Filter by maximum interval
-    let filtered = if $max_interval != null {
-        $filtered | where expected_interval <= $max_interval
-    } else {
-        $filtered
-    }
-
-    # Filter by specific IPs
-    let filtered = if $ips != null {
-        let ip_list = $ips | split row "," | each {|ip| $ip | str trim}
-        $filtered | where {|row| $row.ip in $ip_list}
-    } else {
-        $filtered
-    }
-
-    $filtered
 }
 
 # Analyze polling intervals for a single IP
@@ -146,7 +126,7 @@ def analyze-ip [ip: string, expected: int, stats_dir: string] {
             csv_exists: true,
             sample_count: 0,
             status: "PARSE_ERROR",
-            message: $"Failed to read CSV file: ($err.msg)",
+            message: $"Failed to read CSV file: ($err | get msg? | default 'read error')",
             mean_interval: null,
             std_deviation: null,
             variance_percent: null,
@@ -163,27 +143,77 @@ def analyze-ip [ip: string, expected: int, stats_dir: string] {
     | each {|line|
         let parts = $line | split row ","
         if ($parts | length) >= 2 {
-            {Timestamp: ($parts | get 0), EpochMs: ($parts | get 1), IP: ($parts | get 2), Status: ($parts | get 3), PacketLoss: ($parts | get 4), MinRTT_ms: ($parts | get 5), AvgRTT_ms: ($parts | get 6), MaxRTT_ms: ($parts | get 7)}
+            {
+                Timestamp: ($parts | get 0),
+                EpochMs: ($parts | get 1),
+                IP: ($parts | get 2? | default $ip),
+                Status: ($parts | get 3? | default "UNKNOWN"),
+                PacketLoss: ($parts | get 4? | default "-"),
+                MinRTT_ms: ($parts | get 5? | default "-"),
+                AvgRTT_ms: ($parts | get 6? | default "-"),
+                MaxRTT_ms: ($parts | get 7? | default "-")
+            }
+        } else {
+            null
         }
     }
     | where {|row| $row != null}
+
+    # Check if we have enough data
+    if ($data | length) < 2 {
+        return {
+            ip: $ip,
+            expected_interval: $expected,
+            csv_file: $csv_path,
+            csv_exists: true,
+            sample_count: ($data | length),
+            status: "INSUFFICIENT_DATA",
+            message: "Need at least 2 samples to calculate intervals",
+            mean_interval: null,
+            std_deviation: null,
+            variance_percent: null,
+            first_poll: ($data | first | get Timestamp? | default ""),
+            last_poll: ($data | last | get Timestamp? | default "")
+        }
+    }
 
     # Extract epochs and calculate intervals
     let epochs = $data | get EpochMs | each {|e| $e | into int}
     let intervals = calculate-intervals $epochs
 
+    if ($intervals | length) == 0 {
+        return {
+            ip: $ip,
+            expected_interval: $expected,
+            csv_file: $csv_path,
+            csv_exists: true,
+            sample_count: ($data | length),
+            status: "INSUFFICIENT_DATA",
+            message: "Could not calculate intervals",
+            mean_interval: null,
+            std_deviation: null,
+            variance_percent: null,
+            first_poll: ($data | first | get Timestamp),
+            last_poll: ($data | last | get Timestamp)
+        }
+    }
+
     # Calculate statistics
     let mean = $intervals | math avg
-    let stddev = $intervals | math stddev
+    let stddev = if ($intervals | length) > 1 {
+        $intervals | math stddev
+    } else {
+        0.0
+    }
     let min_val = $intervals | math min
     let max_val = $intervals | math max
-    let variance = ($mean - $expected) | math abs
-    let variance_pct = $variance / $expected
+    let variance = (($mean - $expected) | math abs)
+    let variance_pct = ($variance / $expected) * 100.0
 
     # Determine status
-    let status = if $variance_pct <= $ACCURATE_THRESHOLD {
+    let status = if ($variance_pct / 100.0) <= $ACCURATE_THRESHOLD {
         "ACCURATE"
-    } else if $variance_pct <= $WARNING_THRESHOLD {
+    } else if ($variance_pct / 100.0) <= $WARNING_THRESHOLD {
         "WARNING"
     } else {
         "ERROR"
@@ -196,13 +226,12 @@ def analyze-ip [ip: string, expected: int, stats_dir: string] {
         csv_file: $csv_path,
         csv_exists: true,
         sample_count: ($data | length),
-        actual_intervals: $intervals,
         mean_interval: $mean,
         std_deviation: $stddev,
         min_interval: $min_val,
         max_interval: $max_val,
         variance: $variance,
-        variance_percent: ($variance_pct * 100),
+        variance_percent: $variance_pct,
         status: $status,
         first_poll: ($data | first | get Timestamp),
         last_poll: ($data | last | get Timestamp)
@@ -247,12 +276,14 @@ def generate-report [results: list<record>, verbose: bool] {
     print $"  📊 INSUFFICIENT:     ($insufficient) (($insufficient * 100 / $total | math round --precision 1)%)"
     print $"  🔧 PARSE ERROR:      ($parse_errors) (($parse_errors * 100 / $total | math round --precision 1)%)"
 
-    # Overall accuracy metrics
-    if ($accurate + $warnings + $errors) > 0 {
-        let valid_results = $results | where {|r| $r.status in ["ACCURATE", "WARNING", "ERROR"]}
-        let avg_variance = $valid_results | get variance_percent | math avg
-        let max_variance = $valid_results | get variance_percent | math max
-        let min_variance = $valid_results | get variance_percent | math min
+    # Overall accuracy metrics - only calculate if we have valid data
+    let valid_results = $results | where {|r| $r.status in ["ACCURATE", "WARNING", "ERROR"]} | where {|r| $r.variance_percent != null}
+    
+    if ($valid_results | length) > 0 {
+        let variances = $valid_results | get variance_percent
+        let avg_variance = $variances | math avg
+        let max_variance = $variances | math max
+        let min_variance = $variances | math min
 
         print $"\n📈 ACCURACY METRICS:"
         print $"Average variance: ($avg_variance | math round --precision 2)%"
@@ -264,49 +295,52 @@ def generate-report [results: list<record>, verbose: bool] {
     if $errors > 0 {
         print "\n❌ IPs WITH ERRORS (variance > 15%):"
         print "─────────────────────────────────────────────────────────────"
-        $results
-        | where status == "ERROR"
-        | select ip expected_interval mean_interval variance_percent sample_count
-        | each {|row|
-            print $"  • ($row.ip): Expected ($row.expected_interval)s, Got ($row.mean_interval | math round --precision 2)s (±($row.variance_percent | math round --precision 2)%), Samples: ($row.sample_count)"
+        let error_results = $results | where status == "ERROR"
+        for row in $error_results {
+            if $row.mean_interval != null {
+                let mean = $row.mean_interval | math round --precision 2
+                let variance = $row.variance_percent | math round --precision 2
+                let expected = $row.expected_interval
+                print $"  • ($row.ip): Expected ($expected)s, Got ($mean)s \(±($variance)%\), Samples: ($row.sample_count)"
+            } else {
+                print $"  • ($row.ip): ($row.message? | default 'No data')"
+            }
         }
     }
 
     if $warnings > 0 {
         print "\n⚠️  IPs WITH WARNINGS (variance 5-15%):"
         print "─────────────────────────────────────────────────────────────"
-        $results
-        | where status == "WARNING"
-        | select ip expected_interval mean_interval variance_percent sample_count
-        | each {|row|
-            print $"  • ($row.ip): Expected ($row.expected_interval)s, Got ($row.mean_interval | math round --precision 2)s (±($row.variance_percent | math round --precision 2)%), Samples: ($row.sample_count)"
+        let warning_results = $results | where status == "WARNING"
+        for row in $warning_results {
+            let mean = $row.mean_interval | math round --precision 2
+            let variance = $row.variance_percent | math round --precision 2
+            let expected = $row.expected_interval
+            print $"  • ($row.ip): Expected ($expected)s, Got ($mean)s \(±($variance)%\), Samples: ($row.sample_count)"
         }
     }
 
     if $missing > 0 {
         print "\n🚫 MISSING CSV FILES:"
         print "─────────────────────────────────────────────────────────────"
-        $results
-        | where status == "MISSING"
-        | select ip expected_interval
-        | each {|row|
-            print $"  • ($row.ip) (expected interval: ($row.expected_interval)s)"
+        let missing_results = $results | where status == "MISSING"
+        for row in $missing_results {
+            let interval = $row.expected_interval
+            print $"  • ($row.ip) \(expected interval: ($interval)s\)"
         }
     }
 
     if $parse_errors > 0 {
         print "\n🔧 CSV PARSE ERRORS:"
         print "─────────────────────────────────────────────────────────────"
-        $results
-        | where status == "PARSE_ERROR"
-        | select ip message
-        | each {|row|
-            print $"  • ($row.ip): ($row.message)"
+        let parse_error_results = $results | where status == "PARSE_ERROR"
+        for row in $parse_error_results {
+            print $"  • ($row.ip): ($row.message? | default 'Parse error')"
         }
     }
 
     # Show top 10 most accurate (if we have enough)
-    let accurate_ips = $results | where status == "ACCURATE" | where variance_percent != null
+    let accurate_ips = $results | where status == "ACCURATE" | where {|r| $r.variance_percent != null}
     if ($accurate_ips | length) > 0 {
         print "\n🎯 TOP 10 MOST ACCURATE IPs:"
         print "─────────────────────────────────────────────────────────────"
@@ -314,7 +348,8 @@ def generate-report [results: list<record>, verbose: bool] {
         for row in $top10 {
             let variance = $row.variance_percent | math round --precision 3
             let mean = $row.mean_interval | math round --precision 3
-            print $"  • ($row.ip): ($row.expected_interval)s -> ($mean)s variance ($variance)%"
+            let expected = $row.expected_interval
+            print $"  • ($row.ip): ($expected)s -> ($mean)s variance ($variance)%"
         }
     }
 
@@ -335,11 +370,11 @@ def export-results [results: list<record>, format: string] {
 
     match $format {
         "json" => {
-            $results | to json | save $"($filename).json"
+            $results | to json | save -f $"($filename).json"
             print $"💾 Results saved to ($filename).json"
         }
         "csv" => {
-            $results | to csv | save $"($filename).csv"
+            $results | to csv | save -f $"($filename).csv"
             print $"💾 Results saved to ($filename).csv"
         }
         "table" => {
