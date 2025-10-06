@@ -25,7 +25,7 @@ import static com.practice.urlPoller.Constants.JsonFields.*;
  * Performance: 1000 IPs in 10 interval groups = ~15 threads (vs 2000+ with individual ping)
  * Uses Vert.x named worker pool (6 threads) instead of unbounded custom executor.
  */
-public class FpingBatchWorker
+public class FpingWorker
 {
   public static final String FPING = "fping";
   public static final String COUNT_FLAG = "-c";
@@ -105,7 +105,7 @@ public class FpingBatchWorker
         }
 
         // Parse fping output (concurrent parsing with ConcurrentHashMap)
-        Map<String, PingResult> results = FpingResultParser.parse(output);
+        Map<String, PingResult> results = FpingParser.parse(output);
 
         System.out.printf(FPING_BATCH_COMPLETED_IPS_PARSED_FOR_INTERVAL, results.size(), ipAddresses.size(), pollInterval);
 
@@ -129,13 +129,13 @@ public class FpingBatchWorker
       } catch (IOException ioException)
       {
         System.err.println(FAILED_TO_START_FPING_PROCESS);
-//        ioException.printStackTrace();
+        //        ioException.printStackTrace();
         publishBatchTimeout(vertx, ipAddresses, pollInterval);
         return new ConcurrentHashMap<>();
       } catch (InterruptedException interruptedException)
       {
         System.err.println("Fping process interrupted");
-//        interruptedException.printStackTrace();
+        //        interruptedException.printStackTrace();
         publishBatchTimeout(vertx, ipAddresses, pollInterval);
         Thread.currentThread()
               .interrupt();
@@ -181,7 +181,7 @@ public class FpingBatchWorker
     } catch (IOException ioException)
     {
       System.err.println(ERROR_READING_FPING_OUTPUT);
-//      ioException.printStackTrace();
+      //      ioException.printStackTrace();
     }
 
     return output.toString();
@@ -235,11 +235,9 @@ public class FpingBatchWorker
   {
     var candidateIds = gcdGroup.keySet()
                                .stream()
-                               .map(Key -> Key % tick == 0 ? Key : -1)
-                               .filter(Key -> Key != -1)
-                               .collect(
-                                 Collectors.toSet()
-                               )
+                               .parallel()
+                               .filter(Key -> Key % tick == 0)
+                               .collect(Collectors.toSet())
       ;
 
 

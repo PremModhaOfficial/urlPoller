@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  * 8.8.8.8     : xmt/rcv/%loss = 1/1/0%, min/avg/max = 15.2/15.2/15.2
  * 192.168.1.1 : xmt/rcv/%loss = 1/0/100%
  */
-public class FpingResultParser
+public class FpingParser
 {
   // Pattern to match fping output line
   // Group 1: IP address
@@ -47,7 +47,7 @@ public class FpingResultParser
                       .filter(line -> !line.isEmpty())
                       .filter(line -> FPING_PATTERN.matcher(line)
                                                    .find())  // Only process valid fping lines
-                      .map(FpingResultParser::parseLine)
+                      .map(FpingParser::parseLine)
                       .filter(Objects::nonNull)  // Skip any parsing failures
                       .collect(
                         ConcurrentHashMap::new,  // Thread-safe map

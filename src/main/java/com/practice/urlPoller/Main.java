@@ -13,6 +13,7 @@ import static com.practice.urlPoller.Constants.JsonFields.DATA;
 
 public class Main
 {
+  public static final String FPING_WORKER = "fping-worker";
   static String PATH = "urls.txt";
   private static WorkerExecutor fpingWorkerPool;
 
@@ -33,10 +34,9 @@ public class Main
     // Event loops: 2 (sufficient for event-driven processing)
     // Default worker pool: 0 (not used - we use named pool)
     // Internal blocking pool: 2 (for file I/O)
-    var vertxOptions = new VertxOptions()
-      .setEventLoopPoolSize(2)
-      .setWorkerPoolSize(1)
-      .setInternalBlockingPoolSize(2)
+    var vertxOptions = new VertxOptions().setEventLoopPoolSize(2)
+                                         .setWorkerPoolSize(1)
+                                         .setInternalBlockingPoolSize(2)
       ;
 
     var vertx = Vertx.vertx(vertxOptions);
@@ -44,9 +44,7 @@ public class Main
     // Create dedicated worker pool for fping batch processing
     // Pool size: 6 threads (optimal for ~11 intervals with staggered execution)
     // Max execute time: 10 seconds (fping timeout is 6s + buffer)
-    fpingWorkerPool = vertx.createSharedWorkerExecutor(
-      "fping-worker"
-    );
+    fpingWorkerPool = vertx.createSharedWorkerExecutor(FPING_WORKER);
 
     var verticalList = new ArrayList<Future<String>>();
     var fs = vertx.fileSystem();

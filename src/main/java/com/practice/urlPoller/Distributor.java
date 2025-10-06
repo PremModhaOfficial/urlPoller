@@ -51,7 +51,7 @@ public class Distributor extends VerticleBase
            var tick = gcdTicks.get(timer);
            gcdTicks.put(timer, ++tick);
 
-           var future = FpingBatchWorker.work(vertx, gcdGroup, timer, tick);
+           var future = FpingWorker.work(vertx, gcdGroup, timer, tick);
 
            future.onComplete(_future -> {
                    if (_future.succeeded())

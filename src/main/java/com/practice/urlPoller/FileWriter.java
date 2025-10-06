@@ -46,7 +46,7 @@ public class FileWriter extends VerticleBase
          .consumer(PROCESS_FAILED, message -> {
              var json = (JsonObject) message.body();
              var fileName = json.getString(FILE_NAME);
-             var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
+             var csvData = json.getString(DATA);  // Already in CSV format from FpingWorker
 
              writeCsvRow(fileName, csvData);
              System.err.println("Ping failed: " + csvData);
@@ -57,7 +57,7 @@ public class FileWriter extends VerticleBase
          .consumer(PROCESS_SUCCEEDED, message -> {
              var json = (JsonObject) message.body();
              var fileName = json.getString(FILE_NAME);
-             var csvData = json.getString(DATA);  // Already in CSV format from FpingBatchWorker
+             var csvData = json.getString(DATA);  // Already in CSV format from FpingWorker
 
              writeCsvRow(fileName, csvData);
            }
