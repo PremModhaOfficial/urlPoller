@@ -1,25 +1,18 @@
 package com.practice.urlPoller;
 
 
-import static com.practice.urlPoller.Constants.Event.CONFIG_LOADED;
-import static com.practice.urlPoller.Constants.Event.TIMER_EXPIRED;
-import static com.practice.urlPoller.Constants.JsonFields.DATA;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.practice.urlPoller.Constants.Event.CONFIG_LOADED;
+import static com.practice.urlPoller.Constants.Event.TIMER_EXPIRED;
+import static com.practice.urlPoller.Constants.JsonFields.DATA;
 
 public class Distributor extends VerticleBase
 {
@@ -54,7 +47,7 @@ public class Distributor extends VerticleBase
            }
 
            // Collect expired entries to avoid ConcurrentModificationException
-           var expiredEntries = new ArrayList<Map.Entry<Long, Map<Integer, Set<String>>>>(expiredMap.entrySet());
+           var expiredEntries = new ArrayList<>(expiredMap.entrySet());
 
            // Collect all IPs to poll in this cycle
            var allExpiredIPs = new HashSet<String>();
@@ -204,10 +197,11 @@ public class Distributor extends VerticleBase
 
     var intervals = pollIntervals.stream()
                                  .mapToLong(Integer::longValue)
-                                 .toArray();
+                                 .toArray()
+      ;
     var gcdResult = intervals[0];
 
-    for (int i = 1; i < intervals.length; i++)
+    for (var i = 1; i < intervals.length; i++)
     {
       gcdResult = gcd(gcdResult, intervals[i]);
       if (gcdResult <= 5)

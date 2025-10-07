@@ -6,14 +6,16 @@
 # Configuration constants
 const STATS_DIR = "stats"
 const CONFIG_FILE = "urls.txt"
-const ACCURATE_THRESHOLD = 0.05  # 5% variance = ACCURATE
-const WARNING_THRESHOLD = 0.15   # 15% variance = WARNING
+const DEFAULT_THRESHOLD_SEC = 5.0   # Default threshold in seconds
 
 # Main entry point
-def main [] {
+def main [
+    --thresh: float = 5.0  # Threshold in seconds for ACCURATE status (default: 5s)
+] {
     print "🔍 URL Poller Interval Verification Script"
     print $"Configuration: ($CONFIG_FILE)"
     print $"Stats directory: ($STATS_DIR)"
+    print $"Threshold: ±($thresh)s variance = ACCURATE, >($thresh)s = ERROR"
 
     # Load IP configurations
     print "\n📋 Loading IP configurations..."
@@ -31,7 +33,7 @@ def main [] {
     print "\n⏳ Analyzing polling intervals..."
     let results = $filtered_config | par-each {|entry|
         try {
-            analyze-ip $entry.ip $entry.expected_interval $STATS_DIR
+            analyze-ip $entry.ip $entry.expected_interval $STATS_DIR $thresh
         } catch {|err|
             {
                 ip: $entry.ip,
@@ -94,7 +96,7 @@ def load-config [file: string] {
 }
 
 # Analyze polling intervals for a single IP
-def analyze-ip [ip: string, expected: int, stats_dir: string] {
+def analyze-ip [ip: string, expected: int, stats_dir: string, threshold: float] {
     let csv_path = $"($stats_dir)/($ip).csv"
 
     # Check if CSV file exists
@@ -210,11 +212,9 @@ def analyze-ip [ip: string, expected: int, stats_dir: string] {
     let variance = (($mean - $expected) | math abs)
     let variance_pct = ($variance / $expected) * 100.0
 
-    # Determine status
-    let status = if ($variance_pct / 100.0) <= $ACCURATE_THRESHOLD {
+    # Determine status: Binary check (ACCURATE or ERROR only)
+    let status = if $variance <= $threshold {
         "ACCURATE"
-    } else if ($variance_pct / 100.0) <= $WARNING_THRESHOLD {
-        "WARNING"
     } else {
         "ERROR"
     }
@@ -261,7 +261,6 @@ def generate-report [results: list<record>, verbose: bool] {
     # Summary statistics
     let total = $results | length
     let accurate = $results | where status == "ACCURATE" | length
-    let warnings = $results | where status == "WARNING" | length
     let errors = $results | where status == "ERROR" | length
     let missing = $results | where status == "MISSING" | length
     let insufficient = $results | where status == "INSUFFICIENT_DATA" | length
@@ -270,14 +269,13 @@ def generate-report [results: list<record>, verbose: bool] {
     print $"\n📊 SUMMARY STATISTICS:"
     print $"Total IPs analyzed: ($total)"
     print $"  ✅ ACCURATE:         ($accurate) (($accurate * 100 / $total | math round --precision 1)%)"
-    print $"  ⚠️  WARNING:          ($warnings) (($warnings * 100 / $total | math round --precision 1)%)"
     print $"  ❌ ERROR:            ($errors) (($errors * 100 / $total | math round --precision 1)%)"
     print $"  🚫 MISSING:          ($missing) (($missing * 100 / $total | math round --precision 1)%)"
     print $"  📊 INSUFFICIENT:     ($insufficient) (($insufficient * 100 / $total | math round --precision 1)%)"
     print $"  🔧 PARSE ERROR:      ($parse_errors) (($parse_errors * 100 / $total | math round --precision 1)%)"
 
     # Overall accuracy metrics - only calculate if we have valid data
-    let valid_results = $results | where {|r| $r.status in ["ACCURATE", "WARNING", "ERROR"]} | where {|r| $r.variance_percent != null}
+    let valid_results = $results | where {|r| $r.status in ["ACCURATE", "ERROR"]} | where {|r| $r.variance_percent != null}
     
     if ($valid_results | length) > 0 {
         let variances = $valid_results | get variance_percent
@@ -293,30 +291,19 @@ def generate-report [results: list<record>, verbose: bool] {
 
     # Detailed reports for issues
     if $errors > 0 {
-        print "\n❌ IPs WITH ERRORS (variance > 15%):"
+        print "\n❌ IPs WITH ERRORS (absolute variance > threshold):"
         print "─────────────────────────────────────────────────────────────"
         let error_results = $results | where status == "ERROR"
         for row in $error_results {
             if $row.mean_interval != null {
                 let mean = $row.mean_interval | math round --precision 2
-                let variance = $row.variance_percent | math round --precision 2
+                let variance_sec = $row.variance | math round --precision 2
+                let variance_pct = $row.variance_percent | math round --precision 2
                 let expected = $row.expected_interval
-                print $"  • ($row.ip): Expected ($expected)s, Got ($mean)s \(±($variance)%\), Samples: ($row.sample_count)"
+                print $"  • ($row.ip): Expected ($expected)s, Got ($mean)s \(±($variance_sec)s / ($variance_pct)%\), Samples: ($row.sample_count)"
             } else {
                 print $"  • ($row.ip): ($row.message? | default 'No data')"
             }
-        }
-    }
-
-    if $warnings > 0 {
-        print "\n⚠️  IPs WITH WARNINGS (variance 5-15%):"
-        print "─────────────────────────────────────────────────────────────"
-        let warning_results = $results | where status == "WARNING"
-        for row in $warning_results {
-            let mean = $row.mean_interval | math round --precision 2
-            let variance = $row.variance_percent | math round --precision 2
-            let expected = $row.expected_interval
-            print $"  • ($row.ip): Expected ($expected)s, Got ($mean)s \(±($variance)%\), Samples: ($row.sample_count)"
         }
     }
 

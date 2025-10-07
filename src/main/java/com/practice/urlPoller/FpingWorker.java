@@ -12,8 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static com.practice.urlPoller.Constants.Event.PROCESS_FAILED;
 import static com.practice.urlPoller.Constants.Event.PROCESS_SUCCEEDED;
@@ -40,6 +39,7 @@ public class FpingWorker
   public static final String ERROR_READING_FPING_OUTPUT = "Error reading fping output";
   public static final String TIMEOUT_100 = ",TIMEOUT,100%,-,-,-";
   public static final String ERROR_100 = ",ERROR,100%,-,-,-";
+  public static final int TIMEOUT = 4;
   private static final Logger logger = LoggerFactory.getLogger(FpingWorker.class);
 
   /**
@@ -73,7 +73,6 @@ public class FpingWorker
 
     // Execute blocking fping operation on worker pool using Callable
     return fpingPool.executeBlocking(() -> {
-      // This executes on one of the 6 worker threads
       Thread.currentThread()
             .setName(FPING_BATCH + pollInterval);
 
@@ -105,33 +104,96 @@ public class FpingWorker
       try
       {
         var proc = processBuilder.start();
-        logger.info("[Batch:{}] Process started: pid={}, timeout=6s",
-          batchId, proc.pid());
+        logger.info("[Batch:{}] Process started: pid={}, timeout={}s",
+          batchId, proc.pid(), TIMEOUT);
 
-        // Wait for process completion with timeout
-        var completed = proc.waitFor(6, TimeUnit.SECONDS);
+        // CRITICAL FIX: Read output concurrently to prevent buffer deadlock
+        // With 500+ IPs, fping generates ~50KB output. If stdout buffer fills,
+        // fping blocks writing and waitFor() blocks forever, causing process reaper
+        // to spin at high CPU. Solution: Read output asynchronously while process runs.
 
-        if (!completed)
+        // Start reading output immediately (non-blocking, uses ForkJoinPool.commonPool)
+        var outputFuture = CompletableFuture.supplyAsync(() -> {
+          var readStartNs = System.nanoTime();
+          var output = readProcessOutput(proc);
+          var readDurationMs = (System.nanoTime() - readStartNs) / 1_000_000;
+          logger.debug("[Batch:{}] Async output read: size={}bytes, duration={}ms, thread={}",
+            batchId, output.length(), readDurationMs, Thread.currentThread()
+                                                            .getName());
+          return output;
+        });
+
+        // Wait for process exit with timeout (uses Process.onExit() internally for efficiency)
+        Process completedProc;
+        try
         {
-          // Timeout occurred
+          completedProc = proc.onExit()
+                              .orTimeout(TIMEOUT, TimeUnit.SECONDS)
+                              .get();
+
+          var processDurationMs = (System.nanoTime() - processStartNs) / 1_000_000;
+          var exitCode = completedProc.exitValue();
+          logger.info("[Batch:{}] Process completed: exitCode={}, duration={}ms",
+            batchId, exitCode, processDurationMs);
+        } catch (InterruptedException e)
+        {
+          // Thread interrupted - cleanup
+          Thread.currentThread()
+                .interrupt();
           proc.destroyForcibly();
-          logger.warn("[Batch:{}] Process TIMEOUT: duration={}ms, IPs={}, killing process",
-            batchId, (System.nanoTime() - processStartNs) / 1_000_000, ipAddresses.size());
+          outputFuture.cancel(true);
+          logger.warn("[Batch:{}] Process INTERRUPTED: duration={}ms",
+            batchId, (System.nanoTime() - processStartNs) / 1_000_000);
+          publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
+          return new ConcurrentHashMap<>();
+        } catch (ExecutionException e)
+        {
+          // Check if timeout or other failure
+          if (e.getCause() instanceof TimeoutException)
+          {
+            // Timeout occurred - kill process
+            proc.destroyForcibly();
+            outputFuture.cancel(true); // Cancel output reading
+            logger.warn("[Batch:{}] Process TIMEOUT: duration={}ms, IPs={}, killing process",
+              batchId, (System.nanoTime() - processStartNs) / 1_000_000, ipAddresses.size());
+          } else
+          {
+            // Process failed to start or crashed
+            logger.error("[Batch:{}] Process execution failed: {}", batchId, e.getCause()
+                                                                              .getMessage());
+          }
           publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
           return new ConcurrentHashMap<>();
         }
 
-        // Process completed - read output
-        var processDurationMs = (System.nanoTime() - processStartNs) / 1_000_000;
-        var exitCode = proc.exitValue();
-        logger.info("[Batch:{}] Process completed: exitCode={}, duration={}ms",
-          batchId, exitCode, processDurationMs);
-
+        // Get the output (should be ready by now, process has exited)
         var parseStartNs = System.nanoTime();
-        var output = readProcessOutput(proc);
-        var readDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
+        String output;
+        try
+        {
+          output = outputFuture.get(1, TimeUnit.SECONDS); // Short timeout, should be immediate
+        } catch (InterruptedException e)
+        {
+          Thread.currentThread()
+                .interrupt();
+          logger.error("[Batch:{}] Interrupted while reading process output", batchId);
+          publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
+          return new ConcurrentHashMap<>();
+        } catch (TimeoutException e)
+        {
+          logger.error("[Batch:{}] Timeout reading process output after 1s (process exited but output not ready)", batchId);
+          publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
+          return new ConcurrentHashMap<>();
+        } catch (ExecutionException e)
+        {
+          logger.error("[Batch:{}] Failed to read process output: {}", batchId, e.getCause()
+                                                                                 .getMessage());
+          publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
+          return new ConcurrentHashMap<>();
+        }
 
-        logger.debug("[Batch:{}] Output read: size={}bytes, duration={}ms",
+        var readDurationMs = (System.nanoTime() - parseStartNs) / 1_000_000;
+        logger.debug("[Batch:{}] Output retrieved: size={}bytes, wait={}ms",
           batchId, output.length(), readDurationMs);
 
         if (output.isBlank())
@@ -190,13 +252,6 @@ public class FpingWorker
       {
         logger.error("[Batch:{}] Failed to start process: {}", batchId, ioException.getMessage(), ioException);
         publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
-        return new ConcurrentHashMap<>();
-      } catch (InterruptedException interruptedException)
-      {
-        logger.error("[Batch:{}] Process interrupted", batchId, interruptedException);
-        publishBatchTimeout(vertx, ipAddresses, pollInterval, batchId);
-        Thread.currentThread()
-              .interrupt();
         return new ConcurrentHashMap<>();
       }
     }, false);  // ordered=false for better parallelism
@@ -298,15 +353,4 @@ public class FpingWorker
                                                   .put("batchId", batchId));
   }
 
-  public static Future<Map<String, JsonObject>> work(Vertx vertx, Map<Integer, Set<String>> gcdGroup, int timer, int tick, long batchId)
-  {
-    // Collapse all sets from gcdGroup into a single set
-    // Execute single batch fping for all IPs
-    return work(vertx, gcdGroup.entrySet()
-                               .stream()
-                               .filter(entry -> tick % entry.getKey() == 0)
-                               .map(Map.Entry::getValue)
-                               .flatMap(Set::stream)
-                               .collect(java.util.stream.Collectors.toSet()), timer, batchId);
-  }
 }

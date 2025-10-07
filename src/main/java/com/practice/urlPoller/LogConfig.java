@@ -75,12 +75,4 @@ public class LogConfig
     }
   }
 
-  /**
-   * Get current whitelist size.
-   */
-  public static int getWhitelistSize()
-  {
-    return whitelistedIps.size();
-  }
-
 }
