@@ -202,3 +202,7 @@ test_scaling.sh
 test_thread_names.sh
 verify_installation.sh
 backup.20251003_132525
+IMPROVEMENTS.md
+ROBUSTNESS_GUIDE.md
+TEST_RESULTS.md
+urls_test_robust.txt
