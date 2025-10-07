@@ -44,10 +44,7 @@ public class Main
                                          .setInternalBlockingPoolSize(1)
       ;
 
-    logger.info("Vertx options: eventLoops={}, workers={}, internalBlocking={}",
-      vertxOptions.getEventLoopPoolSize(),
-      vertxOptions.getWorkerPoolSize(),
-      vertxOptions.getInternalBlockingPoolSize());
+    logger.info("Vertx options: eventLoops={}, workers={}, internalBlocking={}", vertxOptions.getEventLoopPoolSize(), vertxOptions.getWorkerPoolSize(), vertxOptions.getInternalBlockingPoolSize());
 
     var vertx = Vertx.vertx(vertxOptions);
 
@@ -57,9 +54,7 @@ public class Main
     //            3 workers handle edge cases where timer cycles overlap
     // Max execute time: 10 seconds (fping timeout is 6s + buffer)
     fpingWorkerPool = vertx.createSharedWorkerExecutor(
-      FPING_WORKER,
-      1,
-      10_000_000_000L // 10 seconds max execution time
+      FPING_WORKER, 1, 10_000_000_000L // 10 seconds max execution time
     );
     logger.info("Created fping worker pool: {} threads (reduced from 20 default)", 3);
 

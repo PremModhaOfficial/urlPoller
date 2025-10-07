@@ -8,5 +8,4 @@ public class JsonFields
   public static final String EXIT_CODE = "exit.code";
   public static final String POLL_INTERVAL = "poll.interval";
 
-
 }
