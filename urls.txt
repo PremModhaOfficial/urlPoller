@@ -81,501 +81,502 @@
 
 www.google.com		,10
 www.blogger.com		,11
-youtube.com,12
-linkedin.com,13
-support.google.com,14
-cloudflare.com,15
-microsoft.com,16
-apple.com,17
-en.wikipedia.org,18
-play.google.com,19
-wordpress.org,20
-docs.google.com,21
-mozilla.org,22
-maps.google.com,23
-youtu.be,24
-drive.google.com,25
-bp.blogspot.com,26
-sites.google.com,27
-googleusercontent.com,28
-accounts.google.com,29
-t.me,30
-europa.eu,31
-plus.google.com,32
-whatsapp.com,33
-adobe.com,34
-facebook.com,35
-policies.google.com,36
-uol.com.br,37
-istockphoto.com,38
-vimeo.com,39
-vk.com,40
-github.com,41
-amazon.com,42
-search.google.com,43
-bbc.co.uk,44
-google.de,45
-live.com,46
-gravatar.com,47
-nih.gov,48
-dan.com,49
-files.wordpress.com,50
-www.yahoo.com,51
-cnn.com,52
-dropbox.com,53
-wikimedia.org,54
-creativecommons.org,55
-google.com.br,56
-line.me,57
-googleblog.com,58
-opera.com,59
-es.wikipedia.org,60
-globo.com,61
-brandbucket.com,62
-myspace.com,63
-slideshare.net,64
-paypal.com,65
-tiktok.com,66
-netvibes.com,67
-theguardian.com,68
-who.int,69
-goo.gl,70
-medium.com,71
-tools.google.com,72
-draft.blogger.com,73
-pt.wikipedia.org,74
-fr.wikipedia.org,75
-www.weebly.com,76
-news.google.com,77
-developers.google.com,78
-w3.org,79
-mail.google.com,80
-gstatic.com,81
-jimdofree.com,82
-cpanel.net,83
-imdb.com,84
-wa.me,85
-feedburner.com,86
-enable-javascript.com,87
-nytimes.com,88
-workspace.google.com,89
-ok.ru,90
-google.es,91
-dailymotion.com,92
-afternic.com,93
-bloomberg.com,94
-amazon.de,95
-photos.google.com,96
-wiley.com,97
-aliexpress.com,98
-indiatimes.com,99
-youronlinechoices.com,100
-elpais.com,101
-tinyurl.com,102
-yadi.sk,103
-spotify.com,104
-huffpost.com,105
-ru.wikipedia.org,106
-google.fr,107
-webmd.com,108
-samsung.com,109
-independent.co.uk,110
-amazon.co.jp,111
-get.google.com,112
-amazon.co.uk,113
-4shared.com,114
-telegram.me,115
-planalto.gov.br,116
-businessinsider.com,117
-ig.com.br,118
-issuu.com,119
-www.gov.br,120
-wsj.com,121
-hugedomains.com,122
-picasaweb.google.com,123
-usatoday.com,124
-scribd.com,125
-www.gov.uk,126
-storage.googleapis.com,127
-huffingtonpost.com,128
-bbc.com,129
-estadao.com.br,130
-nature.com,131
-mediafire.com,132
-washingtonpost.com,133
-forms.gle,134
-namecheap.com,135
-forbes.com,136
-mirror.co.uk,137
-soundcloud.com,138
-fb.com,139
-marketingplatform.google....,140
-domainmarket.com,141
-ytimg.com,142
-terra.com.br,143
-google.co.uk,144
-shutterstock.com,145
-dailymail.co.uk,146
-reg.ru,147
-t.co,148
-cdc.gov,149
-thesun.co.uk,150
-wp.com,151
-cnet.com,152
-instagram.com,153
-researchgate.net,154
-google.it,155
-fandom.com,156
-office.com,157
-list-manage.com,158
-msn.com,159
-un.org,160
-de.wikipedia.org,161
-ovh.com,162
-mail.ru,163
-bing.com,164
-news.yahoo.com,165
-myaccount.google.com,166
-hatena.ne.jp,167
-shopify.com,168
-adssettings.google.com,169
-bit.ly,170
-reuters.com,171
-booking.com,172
-discord.com,173
-buydomains.com,174
-nasa.gov,175
-aboutads.info,176
-time.com,177
-abril.com.br,178
-change.org,179
-nginx.org,180
-twitter.com,181
-www.wikipedia.org,182
-archive.org,183
-cbsnews.com,184
-networkadvertising.org,185
-telegraph.co.uk,186
-pinterest.com,187
-google.co.jp,188
-pixabay.com,189
-zendesk.com,190
-cpanel.com,191
-vistaprint.com,192
-sky.com,193
-windows.net,194
-alicdn.com,195
-google.ca,196
-lemonde.fr,197
-newyorker.com,198
-webnode.page,199
-surveymonkey.com,200
-translate.google.com,201
-calendar.google.com,202
-amazonaws.com,203
-academia.edu,204
-apache.org,205
-imageshack.us,206
-akamaihd.net,207
-nginx.com,208
-discord.gg,209
-thetimes.co.uk,210
-search.yahoo.com,211
-amazon.fr,212
-yelp.com,213
-berkeley.edu,214
-google.ru,215
-sedoparking.com,216
-cbc.ca,217
-unesco.org,218
-ggpht.com,219
-privacyshield.gov,220
-www.over-blog.com,221
-clarin.com,222
-www.wix.com,223
-whitehouse.gov,224
-icann.org,225
-gnu.org,226
-yandex.ru,227
-francetvinfo.fr,228
-gmail.com,229
-mozilla.com,230
-ziddu.com,231
-guardian.co.uk,232
-twitch.tv,233
-sedo.com,234
-foxnews.com,235
-rambler.ru,236
-books.google.com,237
-stanford.edu,238
-wikihow.com,239
-it.wikipedia.org,240
-20minutos.es,241
-sfgate.com,242
-liveinternet.ru,243
-ja.wikipedia.org,244
-000webhost.com,245
-espn.com,246
-eventbrite.com,247
-disney.com,248
-statista.com,249
-addthis.com,250
-pinterest.fr,251
-lavanguardia.com,252
-vkontakte.ru,253
-doubleclick.net,254
-bp2.blogger.com,255
-skype.com,256
-sciencedaily.com,257
-bloglovin.com,258
-insider.com,259
-pl.wikipedia.org,260
-sputniknews.com,261
-id.wikipedia.org,262
-doi.org,263
-nypost.com,264
-elmundo.es,265
-abcnews.go.com,266
-ipv4.google.com,267
-deezer.com,268
-express.co.uk,269
-detik.com,270
-mystrikingly.com,271
-rakuten.co.jp,272
-amzn.to,273
-arxiv.org,274
-alibaba.com,275
-fb.me,276
-wikia.com,277
-t-online.de,278
-telegra.ph,279
-mega.nz,280
-usnews.com,281
-plos.org,282
-naver.com,283
-ibm.com,284
-smh.com.au,285
-dw.com,286
-google.nl,287
-lefigaro.fr,288
-bp1.blogger.com,289
-picasa.google.com,290
-theatlantic.com,291
-nydailynews.com,292
-themeforest.net,293
-rtve.es,294
-newsweek.com,295
-ovh.net,296
-ca.gov,297
-goodreads.com,298
-economist.com,299
-target.com,300
-marca.com,301
-kickstarter.com,302
-hindustantimes.com,303
-weibo.com,304
-finance.yahoo.com,305
-huawei.com,306
-e-monsite.com,307
-hubspot.com,308
-npr.org,309
-netflix.com,310
-gizmodo.com,311
-netlify.app,312
-yandex.com,313
-mashable.com,314
-cnil.fr,315
-latimes.com,316
-steampowered.com,317
-rt.com,318
-photobucket.com,319
-quora.com,320
-nbcnews.com,321
-android.com,322
-instructables.com,323
-www.canalblog.com,324
-www.livejournal.com,325
-ouest-france.fr,326
-tripadvisor.com,327
-ovhcloud.com,328
-pexels.com,329
-oracle.com,330
-yahoo.co.jp,331
-addtoany.com,332
-sakura.ne.jp,333
-cointernet.com.co,334
-twimg.com,335
-britannica.com,336
-php.net,337
-standard.co.uk,338
-groups.google.com,339
-cnbc.com,340
-loc.gov,341
-qq.com,342
-buzzfeed.com,343
-godaddy.com,344
-ikea.com,345
-disqus.com,346
-taringa.net,347
-ea.com,348
-dropcatch.com,349
-techcrunch.com,350
-canva.com,351
-offset.com,352
-ebay.com,353
-zoom.us,354
-cambridge.org,355
-unsplash.com,356
-playstation.com,357
-people.com,358
-springer.com,359
-psychologytoday.com,360
-sendspace.com,361
-home.pl,362
-rapidshare.com,363
-prezi.com,364
-photos1.blogger.com,365
-thenai.org,366
-ftc.gov,367
-google.pl,368
-ted.com,369
-secureserver.net,370
-code.google.com,371
-plesk.com,372
-aol.com,373
-biglobe.ne.jp,374
-hp.com,375
-canada.ca,376
-linktr.ee,377
-hollywoodreporter.com,378
-ietf.org,379
-clickbank.net,380
-harvard.edu,381
-amazon.es,382
-oup.com,383
-timeweb.ru,384
-engadget.com,385
-vice.com,386
-cornell.edu,387
-dreamstime.com,388
-tmz.com,389
-gofundme.com,390
-pbs.org,391
-stackoverflow.com,392
-abc.net.au,393
-sciencedirect.com,394
-ft.com,395
-variety.com,396
-alexa.com,397
-abc.es,398
-walmart.com,399
-gooyaabitemplates.com,400
-redbull.com,401
-ssl-images-amazon.com,402
-theverge.com,403
-spiegel.de,404
-about.com,405
-nationalgeographic.com,406
-bandcamp.com,407
-m.wikipedia.org,408
-zippyshare.com,409
-wired.com,410
-freepik.com,411
-outlook.com,412
-mit.edu,413
-sapo.pt,414
-goo.ne.jp,415
-java.com,416
-google.co.th,417
-scmp.com,418
-mayoclinic.org,419
-scholastic.com,420
-nba.com,421
-reverbnation.com,422
-depositfiles.com,423
-video.google.com,424
-howstuffworks.com,425
-cbslocal.com,426
-merriam-webster.com,427
-focus.de,428
-admin.ch,429
-gfycat.com,430
-com.com,431
-narod.ru,432
-boston.com,433
-sony.com,434
-justjared.com,435
-bitly.com,436
-jstor.org,437
-amebaownd.com,438
-g.co,439
-gsmarena.com,440
-lexpress.fr,441
-reddit.com,442
-usgs.gov,443
-bigcommerce.com,444
-gettyimages.com,445
-ign.com,446
-justgiving.com,447
-techradar.com,448
-weather.com,449
-amazon.ca,450
-justice.gov,451
-sciencemag.org,452
-pcmag.com,453
-theconversation.com,454
-foursquare.com,455
-flickr.com,456
-giphy.com,457
-tvtropes.org,458
-fifa.com,459
-upenn.edu,460
-digg.com,461
-bestfreecams.club,462
-histats.com,463
-salesforce.com,464
-blog.google,465
-apnews.com,466
-theglobeandmail.com,467
-m.me,468
-europapress.es,469
-washington.edu,470
-thefreedictionary.com,471
-jhu.edu,472
-euronews.com,473
-liberation.fr,474
-ads.google.com,475
-trustpilot.com,476
-google.com.tw,477
-softonic.com,478
-kakao.com,479
-storage.canalblog.com,480
-interia.pl,481
-metro.co.uk,482
-viglink.com,483
-last.fm,484
-blackberry.com,485
-public-api.wordpress.com,486
-sina.com.cn,487
-unicef.org,488
-archives.gov,489
-nps.gov,490
-utexas.edu,491
-biblegateway.com,492
-usda.gov,493
-indiegogo.com,494
-nikkei.com,495
-radiofrance.fr,496
-repubblica.it,497
-substack.com,498
-ap.org,499
-nicovideo.jp,500
-joomla.org,501
-news.com.au,502
-allaboutcookies.org,503
-mailchimp.com,504
-stores.jp,505
-intel.com,506
-bp0.blogger.com,507
-box.com,508
-nhk.or.jp,509
+#  youtube.com,12
+#  linkedin.com,13
+#  support.google.com,14
+#  cloudflare.com,15
+#  microsoft.com,16
+#  apple.com,17
+#  en.wikipedia.org,18
+#  play.google.com,19
+#  wordpress.org,20
+#  docs.google.com,21
+#  mozilla.org,22
+#  maps.google.com,23
+#  youtu.be,24
+#  drive.google.com,25
+#  bp.blogspot.com,26
+#  sites.google.com,27
+#  googleusercontent.com,28
+#  accounts.google.com,29
+#  t.me,30
+#  europa.eu,31
+#  plus.google.com,32
+#  whatsapp.com,33
+#  adobe.com,34
+#  facebook.com,35
+#  policies.google.com,36
+#  uol.com.br,37
+#  istockphoto.com,38
+#  vimeo.com,39
+#  vk.com,40
+#  github.com,41
+#  amazon.com,42
+#  search.google.com,43
+#  bbc.co.uk,44
+#  google.de,45
+#  live.com,46
+#  gravatar.com,47
+#  nih.gov,48
+#  dan.com,49
+#  files.wordpress.com,50
+#  www.yahoo.com,51
+#  cnn.com,52
+#  dropbox.com,53
+#  wikimedia.org,54
+#  creativecommons.org,55
+#  google.com.br,56
+#  line.me,57
+#  googleblog.com,58
+#  opera.com,59
+#  es.wikipedia.org,60
+#  globo.com,61
+#  brandbucket.com,62
+#  myspace.com,63
+#  slideshare.net,64
+#  paypal.com,65
+#  tiktok.com,66
+#  netvibes.com,67
+#  theguardian.com,68
+#  who.int,69
+#  goo.gl,70
+#  medium.com,71
+#  tools.google.com,72
+#  draft.blogger.com,73
+#  pt.wikipedia.org,74
+#  fr.wikipedia.org,75
+#  www.weebly.com,76
+#  news.google.com,77
+#  developers.google.com,78
+#  w3.org,79
+#  mail.google.com,80
+#  gstatic.com,81
+#  jimdofree.com,82
+#  cpanel.net,83
+#  imdb.com,84
+#  wa.me,85
+#  feedburner.com,86
+#  enable-javascript.com,87
+#  nytimes.com,88
+#  workspace.google.com,89
+#  ok.ru,90
+#  google.es,91
+#  dailymotion.com,92
+#  afternic.com,93
+#  bloomberg.com,94
+#  amazon.de,95
+#  photos.google.com,96
+#  wiley.com,97
+#  aliexpress.com,98
+#  indiatimes.com,99
+#  youronlinechoices.com,100
+#  elpais.com,101
+#  tinyurl.com,102
+#  yadi.sk,103
+#  spotify.com,104
+#  huffpost.com,105
+#  ru.wikipedia.org,106
+#  google.fr,107
+#  webmd.com,108
+#  samsung.com,109
+#  independent.co.uk,110
+#  amazon.co.jp,111
+#  get.google.com,112
+#  amazon.co.uk,113
+#  4shared.com,114
+#  telegram.me,115
+#  planalto.gov.br,116
+#  businessinsider.com,117
+#  ig.com.br,118
+#  issuu.com,119
+#  www.gov.br,120
+#  wsj.com,121
+#  hugedomains.com,122
+#  picasaweb.google.com,123
+#  usatoday.com,124
+#  scribd.com,125
+#  www.gov.uk,126
+#  storage.googleapis.com,127
+#  huffingtonpost.com,128
+#  bbc.com,129
+#  estadao.com.br,130
+#  nature.com,131
+#  mediafire.com,132
+#  washingtonpost.com,133
+#  forms.gle,134
+#  namecheap.com,135
+#  forbes.com,136
+#  mirror.co.uk,137
+#  soundcloud.com,138
+#  fb.com,139
+#  marketingplatform.google....,140
+#  domainmarket.com,141
+#  ytimg.com,142
+#  terra.com.br,143
+#  google.co.uk,144
+#  shutterstock.com,145
+#  dailymail.co.uk,146
+#  reg.ru,147
+#  t.co,148
+#  cdc.gov,149
+#  thesun.co.uk,150
+#  wp.com,151
+#  cnet.com,152
+#  instagram.com,153
+#  researchgate.net,154
+#  google.it,155
+#  fandom.com,156
+#  office.com,157
+#  list-manage.com,158
+#  msn.com,159
+#  un.org,160
+#  de.wikipedia.org,161
+#  ovh.com,162
+#  mail.ru,163
+#  bing.com,164
+#  news.yahoo.com,165
+#  myaccount.google.com,166
+#  hatena.ne.jp,167
+#  shopify.com,168
+#  adssettings.google.com,169
+#  bit.ly,170
+#  reuters.com,171
+#  booking.com,172
+#  discord.com,173
+#  buydomains.com,174
+#  nasa.gov,175
+#  aboutads.info,176
+#  time.com,177
+#  abril.com.br,178
+#  change.org,179
+#  nginx.org,180
+#  twitter.com,181
+#  www.wikipedia.org,182
+#  archive.org,183
+#  cbsnews.com,184
+#  networkadvertising.org,185
+#  telegraph.co.uk,186
+#  pinterest.com,187
+#  google.co.jp,188
+#  pixabay.com,189
+#  zendesk.com,190
+#  cpanel.com,191
+#  vistaprint.com,192
+#  sky.com,193
+#  windows.net,194
+#  alicdn.com,195
+#  google.ca,196
+#  lemonde.fr,197
+#  newyorker.com,198
+#  webnode.page,199
+#  surveymonkey.com,200
+#  translate.google.com,201
+#  calendar.google.com,202
+#  amazonaws.com,203
+#  academia.edu,204
+#  apache.org,205
+#  imageshack.us,206
+#  akamaihd.net,207
+#  nginx.com,208
+#  discord.gg,209
+#  thetimes.co.uk,210
+#  search.yahoo.com,211
+#  amazon.fr,212
+#  yelp.com,213
+#  berkeley.edu,214
+#  google.ru,215
+#  sedoparking.com,216
+#  cbc.ca,217
+#  unesco.org,218
+#  ggpht.com,219
+#  privacyshield.gov,220
+#  www.over-blog.com,221
+#  clarin.com,222
+#  www.wix.com,223
+#  whitehouse.gov,224
+#  icann.org,225
+#  gnu.org,226
+#  yandex.ru,227
+#  francetvinfo.fr,228
+#  gmail.com,229
+#  mozilla.com,230
+#  ziddu.com,231
+#  guardian.co.uk,232
+#  twitch.tv,233
+#  sedo.com,234
+#  foxnews.com,235
+#  rambler.ru,236
+#  books.google.com,237
+#  stanford.edu,238
+#  wikihow.com,239
+#  it.wikipedia.org,240
+#  20minutos.es,241
+#  sfgate.com,242
+#  liveinternet.ru,243
+#  ja.wikipedia.org,244
+#  000webhost.com,245
+#  espn.com,246
+#  eventbrite.com,247
+#  disney.com,248
+#  statista.com,249
+#  addthis.com,250
+#  pinterest.fr,251
+#  lavanguardia.com,252
+#  vkontakte.ru,253
+#  doubleclick.net,254
+#  bp2.blogger.com,255
+#  skype.com,256
+#  sciencedaily.com,257
+#  bloglovin.com,258
+#  insider.com,259
+#  pl.wikipedia.org,260
+#  sputniknews.com,261
+#  id.wikipedia.org,262
+#  doi.org,263
+#  nypost.com,264
+#  elmundo.es,265
+#  abcnews.go.com,266
+#  ipv4.google.com,267
+#  deezer.com,268
+#  express.co.uk,269
+#  detik.com,270
+#  mystrikingly.com,271
+#  rakuten.co.jp,272
+#  amzn.to,273
+#  arxiv.org,274
+#  alibaba.com,275
+#  fb.me,276
+#  wikia.com,277
+#  t-online.de,278
+#  telegra.ph,279
+#  mega.nz,280
+#  usnews.com,281
+#  plos.org,282
+#  naver.com,283
+#  ibm.com,284
+#  smh.com.au,285
+#  dw.com,286
+#  google.nl,287
+#  lefigaro.fr,288
+#  bp1.blogger.com,289
+#  picasa.google.com,290
+#  theatlantic.com,291
+#  nydailynews.com,292
+#  themeforest.net,293
+#  rtve.es,294
+#  newsweek.com,295
+#  ovh.net,296
+#  ca.gov,297
+#  goodreads.com,298
+#  economist.com,299
+#  target.com,300
+#  marca.com,301
+#  kickstarter.com,302
+#  hindustantimes.com,303
+#  weibo.com,304
+#  finance.yahoo.com,305
+#  huawei.com,306
+#  e-monsite.com,307
+#  hubspot.com,308
+#  npr.org,309
+#  netflix.com,310
+#  gizmodo.com,311
+#  netlify.app,312
+#  yandex.com,313
+#  mashable.com,314
+#  cnil.fr,315
+#  latimes.com,316
+#  steampowered.com,317
+#  rt.com,318
+#  photobucket.com,319
+#  quora.com,320
+#  nbcnews.com,321
+#  android.com,322
+#  instructables.com,323
+#  www.canalblog.com,324
+#  www.livejournal.com,325
+#  ouest-france.fr,326
+#  tripadvisor.com,327
+#  ovhcloud.com,328
+#  pexels.com,329
+#  oracle.com,330
+#  yahoo.co.jp,331
+#  addtoany.com,332
+#  sakura.ne.jp,333
+#  cointernet.com.co,334
+#  twimg.com,335
+#  britannica.com,336
+#  php.net,337
+#  standard.co.uk,338
+#  groups.google.com,339
+#  cnbc.com,340
+#  loc.gov,341
+#  qq.com,342
+#  buzzfeed.com,343
+#  godaddy.com,344
+#  ikea.com,345
+#  disqus.com,346
+#  taringa.net,347
+#  ea.com,348
+#  dropcatch.com,349
+#  techcrunch.com,350
+#  canva.com,351
+#  offset.com,352
+#  ebay.com,353
+#  zoom.us,354
+#  cambridge.org,355
+#  unsplash.com,356
+#  playstation.com,357
+#  people.com,358
+#  springer.com,359
+#  psychologytoday.com,360
+#  sendspace.com,361
+#  home.pl,362
+#  rapidshare.com,363
+#  prezi.com,364
+#  photos1.blogger.com,365
+#  thenai.org,366
+#  ftc.gov,367
+#  google.pl,368
+#  ted.com,369
+#  secureserver.net,370
+#  code.google.com,371
+#  plesk.com,372
+#  aol.com,373
+#  biglobe.ne.jp,374
+#  hp.com,375
+#  canada.ca,376
+#  linktr.ee,377
+#  hollywoodreporter.com,378
+#  ietf.org,379
+#  clickbank.net,380
+#  harvard.edu,381
+#  amazon.es,382
+#  oup.com,383
+#  timeweb.ru,384
+#  engadget.com,385
+#  vice.com,386
+#  cornell.edu,387
+#  dreamstime.com,388
+#  tmz.com,389
+#  gofundme.com,390
+#  pbs.org,391
+#  stackoverflow.com,392
+#  abc.net.au,393
+#  sciencedirect.com,394
+#  ft.com,395
+#  variety.com,396
+#  alexa.com,397
+#  abc.es,398
+#  walmart.com,399
+#  gooyaabitemplates.com,400
+#  redbull.com,401
+#  ssl-images-amazon.com,402
+#  theverge.com,403
+#  spiegel.de,404
+#  about.com,405
+#  nationalgeographic.com,406
+#  bandcamp.com,407
+#  m.wikipedia.org,408
+#  zippyshare.com,409
+#  wired.com,410
+#  freepik.com,411
+#  outlook.com,412
+#  mit.edu,413
+#  sapo.pt,414
+#  goo.ne.jp,415
+#  java.com,416
+#  google.co.th,417
+#  scmp.com,418
+#  mayoclinic.org,419
+#  scholastic.com,420
+#  nba.com,421
+#  reverbnation.com,422
+#  depositfiles.com,423
+#  video.google.com,424
+#  howstuffworks.com,425
+#  cbslocal.com,426
+#  merriam-webster.com,427
+#  focus.de,428
+#  admin.ch,429
+#  gfycat.com,430
+#  com.com,431
+#  narod.ru,432
+#  boston.com,433
+#  sony.com,434
+#  justjared.com,435
+#  bitly.com,436
+#  jstor.org,437
+#  amebaownd.com,438
+#  g.co,439
+#  gsmarena.com,440
+#  lexpress.fr,441
+#  reddit.com,442
+#  usgs.gov,443
+#  bigcommerce.com,444
+#  gettyimages.com,445
+#  ign.com,446
+#  justgiving.com,447
+#  techradar.com,448
+#  weather.com,449
+#  amazon.ca,450
+#  justice.gov,451
+#  sciencemag.org,452
+#  pcmag.com,453
+#  theconversation.com,454
+#  foursquare.com,455
+#  flickr.com,456
+#  giphy.com,457
+#  tvtropes.org,458
+#  fifa.com,459
+#  upenn.edu,460
+#  digg.com,461
+#  bestfreecams.club,462
+#  histats.com,463
+#  salesforce.com,464
+#  blog.google,465
+#  apnews.com,466
+#  theglobeandmail.com,467
+#  m.me,468
+#  europapress.es,469
+#  washington.edu,470
+#  thefreedictionary.com,471
+#  jhu.edu,472
+#  euronews.com,473
+#  liberation.fr,474
+#  ads.google.com,475
+#  trustpilot.com,476
+#  google.com.tw,477
+#  softonic.com,478
+#  kakao.com,479
+#  storage.canalblog.com,480
+#  interia.pl,481
+#  metro.co.uk,482
+#  viglink.com,483
+#  last.fm,484
+#  blackberry.com,485
+#  public-api.wordpress.com,486
+#  sina.com.cn,487
+#  unicef.org,488
+#  archives.gov,489
+#  nps.gov,490
+#  utexas.edu,491
+#  biblegateway.com,492
+#  usda.gov,493
+#  indiegogo.com,494
+#  nikkei.com,495
+#  radiofrance.fr,496
+#  repubblica.it,497
+#  substack.com,498
+#  ap.org,499
+#  nicovideo.jp,500
+#  joomla.org,501
+#  news.com.au,502
+#  allaboutcookies.org,503
+#  mailchimp.com,504
+#  stores.jp,505
+#  intel.com,506
+#  bp0.blogger.com,507
+#  box.com,508
+#  nhk.or.jp,509
+#
