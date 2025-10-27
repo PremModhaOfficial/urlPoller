@@ -53,30 +53,28 @@ public class FileWriter extends VerticleBase
          .consumer(PROCESS_FAILED, message -> {
            var json = (JsonObject) message.body();
            var ip = json.getString(FILE_NAME);
-           long batchId = json.getLong("batchId", -1L);
 
-           logger.debug("[Batch:{}][IP:{}] PROCESS_FAILED event received", batchId, ip);
+           logger.debug("[IP:{}] PROCESS_FAILED event received", ip);
 
            // Option C - Whitelist logging:
            if (LogConfig.shouldLogIp(ip)) {
-             logger.trace("[Batch:{}][IP:{}] Writing FAILED result to CSV", batchId, ip);
+             logger.trace("[IP:{}] Writing FAILED result to CSV", ip);
            }
 
-           writeCsvRow(ip, json.getString(DATA), batchId);
+           writeCsvRow(ip, json.getString(DATA));
          });
 
     vertx.eventBus()
          .consumer(PROCESS_SUCCEEDED, message -> {
            var json = (JsonObject) message.body();
            var ip = json.getString(FILE_NAME);
-           var batchId = json.getLong("batchId", -1L);
 
            // Option C - Whitelist logging:
            if (LogConfig.shouldLogIp(ip)) {
-             logger.trace("[Batch:{}][IP:{}] PROCESS_SUCCEEDED, writing to CSV", batchId, ip);
+             logger.trace("[IP:{}] PROCESS_SUCCEEDED, writing to CSV", ip);
            }
 
-           writeCsvRow(ip, json.getString(DATA), batchId);
+           writeCsvRow(ip, json.getString(DATA));
          });
 
     return Future.succeededFuture();
@@ -89,9 +87,8 @@ public class FileWriter extends VerticleBase
    *
    * @param fileName IP address (used as filename)
    * @param csvRow   CSV row data (IP,Status,Loss,Min,Avg,Max)
-   * @param batchId  Unique batch ID for correlation
    */
-  private void writeCsvRow(String fileName, String csvRow, long batchId)
+  private void writeCsvRow(String fileName, String csvRow)
   {
     var startNs = System.nanoTime();
     var filePath = FILE_PARENT + fileName + CSV_EXTENSION;
@@ -102,14 +99,14 @@ public class FileWriter extends VerticleBase
     vertx.fileSystem()
          .open(filePath, new OpenOptions().setAppend(true)
                                           .setCreate(true))
-         .onFailure(error -> logger.error("[Batch:{}][IP:{}] File write failed: path={}, error={}",
-             batchId, fileName, filePath, error.getMessage(), error))
+         .onFailure(error -> logger.error("[IP:{}] File write failed: path={}, error={}",
+             fileName, filePath, error.getMessage(), error))
          .onSuccess(file -> {
            var durationMs = (System.nanoTime() - startNs) / 1_000_000;
 
            if (LogConfig.shouldLogIp(fileName)) {
-             logger.trace("[Batch:{}][IP:{}] File opened: path={}, duration={}ms",
-                 batchId, fileName, filePath, durationMs);
+             logger.trace("[IP:{}] File opened: path={}, duration={}ms",
+                 fileName, filePath, durationMs);
            }
 
            var buffer = Buffer.buffer();
@@ -135,8 +132,8 @@ public class FileWriter extends VerticleBase
                  var totalDurationMs = (System.nanoTime() - startNs) / 1_000_000;
 
                  if (LogConfig.shouldLogIp(fileName)) {
-                   logger.trace("[Batch:{}][IP:{}] Write completed: bytes={}, duration={}ms",
-                       batchId, fileName, buffer.length(), totalDurationMs);
+                   logger.trace("[IP:{}] Write completed: bytes={}, duration={}ms",
+                       fileName, buffer.length(), totalDurationMs);
                  }
 
                  file.close();

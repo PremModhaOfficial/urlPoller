@@ -35,18 +35,17 @@ public class FpingParser
    * Thread-safe using ConcurrentHashMap.
    *
    * @param fpingOutput The complete stdout from fping command
-   * @param batchId     Unique batch ID for correlation
    * @return ConcurrentHashMap mapping each IP to its ping result JsonObject
    */
-  public static Map<String, JsonObject> parse(String fpingOutput, long batchId)
+  public static Map<String, JsonObject> parse(String fpingOutput)
   {
     if (fpingOutput == null || fpingOutput.isBlank())
     {
-      logger.debug("[Batch:{}] Empty fping output", batchId);
+      logger.debug("Empty fping output");
       return new ConcurrentHashMap<>();
     }
 
-    logger.debug("[Batch:{}] Parsing started: lines={}", batchId, fpingOutput.split("\n").length);
+    logger.debug("Parsing started: lines={}", fpingOutput.split("\n").length);
 
     // Use parallel stream for concurrent parsing of large result sets
 
