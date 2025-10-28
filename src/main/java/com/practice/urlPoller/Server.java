@@ -125,26 +125,15 @@ public class Server
             });
 
         router.put("/ip/:id")
+            .handler(this::validateIPRequestHandler)
             .handler(ctx -> {
                 try
                 {
                     var id = Integer.parseInt(ctx.pathParam("id"));
                     var body = ctx.body()
                         .asJsonObject();
-                    if (body == null)
-                    {
-                        ctx.fail(400);
-                        return;
-                    }
-
                     var ip = body.getString("ip");
                     var pollInterval = body.getInteger("pollInterval");
-
-                    if (Objects.isNull(ip) || Objects.isNull(pollInterval))
-                    {
-                        ctx.fail(400);
-                        return;
-                    }
 
                     client.updateIP(id, ip, pollInterval)
                         .onSuccess(v -> ctx.response()
@@ -179,22 +168,12 @@ public class Server
             });
 
         router.post("/ip")
+            .handler(this::validateIPRequestHandler)
             .handler(ctx -> {
                 var body = ctx.body()
                     .asJsonObject();
-                if (body == null)
-                {
-                    ctx.fail(400);
-                    return;
-                }
                 var ip = body.getString("ip");
                 var pollInterval = body.getInteger("pollInterval");
-
-                if (Objects.isNull(pollInterval) || Objects.isNull(ip))
-                {
-                    ctx.fail(400);
-                    return;
-                }
 
                 client.addIP(ip, pollInterval)
                     .onSuccess(v -> ctx.response()
@@ -249,5 +228,28 @@ public class Server
 
         ctx.next();
     }
+
+    private void validateIPRequestHandler(RoutingContext ctx)
+    {
+        var body = ctx.body()
+            .asJsonObject();
+        if (body == null)
+        {
+            ctx.fail(400);
+            return;
+        }
+
+        var ip = body.getString("ip");
+        var pollInterval = body.getInteger("pollInterval");
+
+        if (Objects.isNull(ip) || Objects.isNull(pollInterval))
+        {
+            ctx.fail(400);
+            return;
+        }
+
+        ctx.next();
+    }
 }
+
 
