@@ -17,10 +17,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.practice.urlPoller.Constants.JsonFields;
+
 public class PostgresClient
 {
 
-    public static final String DB_NAME = "MAIN";
+    public static final String DB_NAME = "postgres";
     public static final String LOCALHOST = "localhost";
     public static final String POSTGRES = "postgres";
     public static final String POSTGRES_PASS = "postgres";
@@ -45,22 +47,18 @@ public class PostgresClient
         // Test connection immediately
         client.query("SELECT 1")
             .execute()
-            .onSuccess(rs -> LOG.info("✅ PostgreSQL connection verified"))
-            .onFailure(err -> LOG.error("❌ PostgreSQL connection failed", err));
+            .onSuccess(rs -> LOG.info("PostgreSQL connection verified"))
+            .onFailure(err -> LOG.error("PostgreSQL connection failed", err));
     }
-
-    // =====================================================
-    // CREATE Operations
-    // =====================================================
 
     /**
      * Add a new IP with timestamp-based polling
      *
      * @param ip           IP address
      * @param pollInterval Polling interval in seconds
-     * @return Future with the new IP's ID
+     * @return Future with JsonObject containing id, ip, pollInterval
      */
-    public Future<Integer> addIP(String ip, int pollInterval)
+    public Future<JsonObject> addIP(String ip, int pollInterval)
     {
         LOG.debug("Adding IP: ip={}, pollInterval={}s", ip, pollInterval);
 
@@ -74,10 +72,13 @@ public class PostgresClient
                 int id = rows.iterator()
                     .next()
                     .getInteger("id");
-                LOG.info("✅ IP added: id={}, ip={}, pollInterval={}s", id, ip, pollInterval);
-                return id;
+                LOG.info("IP added: id={}, ip={}, pollInterval={}s", id, ip, pollInterval);
+                return new JsonObject()
+                    .put(JsonFields.ID, id)
+                    .put(JsonFields.IP, ip)
+                    .put(JsonFields.POLL_INTERVAL, pollInterval);
             })
-            .onFailure(err -> LOG.error("❌ Failed to add IP: {}", ip, err));
+            .onFailure(err -> LOG.error("Failed to add IP: {}", ip, err));
     }
 
     // =====================================================
@@ -99,7 +100,7 @@ public class PostgresClient
                 .map(this::rowToJson)
                 .collect(Collectors.toList()))
             .onSuccess(ips -> LOG.debug("Retrieved {} IPs", ips.size()))
-            .onFailure(err -> LOG.error("❌ Failed to get all IPs", err));
+            .onFailure(err -> LOG.error("Failed to get all IPs", err));
     }
 
     /**
@@ -123,7 +124,7 @@ public class PostgresClient
                 return rowToJson(rows.iterator()
                                      .next());
             })
-            .onFailure(err -> LOG.error("❌ Failed to get IP by id={}", id, err));
+            .onFailure(err -> LOG.error("Failed to get IP by id={}", id, err));
     }
 
     /**
@@ -151,38 +152,7 @@ public class PostgresClient
                     LOG.debug("Found {} IPs due for polling", ips.size());
                 }
             })
-            .onFailure(err -> LOG.error("❌ Failed to get IPs due for poll", err));
-    }
-
-    /**
-     * Update next_poll_time for a single IP
-     *
-     * @param id           IP record ID
-     * @param pollInterval Polling interval in seconds
-     * @return Future<Void>
-     */
-    public Future<Void> updateNextPollTime(int id, int pollInterval)
-    {
-        Promise<Void> promise = Promise.promise();
-        var sql = "UPDATE ips " +
-            "SET next_poll_time = NOW() + ($1 || ' seconds')::INTERVAL " +
-            "WHERE id = $2";
-
-        client.preparedQuery(sql)
-            .execute(Tuple.of(String.valueOf(pollInterval), id))
-            .onComplete(ar -> {
-                if (ar.succeeded())
-                {
-                    LOG.debug("Updated next_poll_time for id={}", id);
-                    promise.complete();
-                } else
-                {
-                    LOG.error("❌ Failed to update next_poll_time for id={}", id, ar.cause());
-                    promise.fail(ar.cause());
-                }
-            });
-
-        return promise.future();
+            .onFailure(err -> LOG.error("Failed to get IPs due for poll", err));
     }
 
     /**
@@ -216,7 +186,7 @@ public class PostgresClient
                     promise.complete();
                 } else
                 {
-                    LOG.error("❌ Failed to batch update {} IPs", ips.size(), ar.cause());
+                    LOG.error("Failed to batch update {} IPs", ips.size(), ar.cause());
                     promise.fail(ar.cause());
                 }
             });
@@ -230,28 +200,34 @@ public class PostgresClient
      * @param id           IP record ID
      * @param ip           New IP address
      * @param pollInterval New polling interval in seconds
-     * @return Future<Void>
+     * @return Future with JsonObject containing updated id, ip, pollInterval
      */
-    public Future<Void> updateIP(int id, String ip, int pollInterval)
+    public Future<JsonObject> updateIP(int id, String ip, int pollInterval)
     {
         LOG.debug("Updating IP: id={}, ip={}, pollInterval={}s", id, ip, pollInterval);
 
-        Promise<Void> promise = Promise.promise();
+        Promise<JsonObject> promise = Promise.promise();
         var sql = "UPDATE ips " +
             "SET ip = $1, poll_interval = $2, " +
             "next_poll_time = NOW() + ($3 || ' seconds')::INTERVAL " +
-            "WHERE id = $4";
+            "WHERE id = $4 " +
+            "RETURNING id, ip, poll_interval";
 
         client.preparedQuery(sql)
             .execute(Tuple.of(ip, pollInterval, String.valueOf(pollInterval), id))
             .onComplete(ar -> {
                 if (ar.succeeded())
                 {
-                    LOG.info("✅ IP updated: id={}, ip={}, pollInterval={}s", id, ip, pollInterval);
-                    promise.complete();
+                    var row = ar.result().iterator().next();
+                    var data = new JsonObject()
+                        .put(JsonFields.ID, row.getInteger("id"))
+                        .put(JsonFields.IP, row.getString("ip"))
+                        .put(JsonFields.POLL_INTERVAL, row.getInteger("poll_interval"));
+                    LOG.info("IP updated: id={}, ip={}, pollInterval={}s", id, ip, pollInterval);
+                    promise.complete(data);
                 } else
                 {
-                    LOG.error("❌ Failed to update IP: id={}", id, ar.cause());
+                    LOG.error("Failed to update IP: id={}", id, ar.cause());
                     promise.fail(ar.cause());
                 }
             });
@@ -263,25 +239,31 @@ public class PostgresClient
      * Delete an IP by ID
      *
      * @param id IP record ID
-     * @return Future<Void>
+     * @return Future with JsonObject containing deleted id
      */
-    public Future<Void> deleteIP(int id)
+    public Future<JsonObject> deleteIP(int id)
     {
         LOG.debug("Deleting IP: id={}", id);
 
-        Promise<Void> promise = Promise.promise();
-        var sql = "DELETE FROM ips WHERE id = $1";
+        Promise<JsonObject> promise = Promise.promise();
+        var sql = "DELETE FROM ips WHERE id = $1 RETURNING id";
 
         client.preparedQuery(sql)
             .execute(Tuple.of(id))
             .onComplete(ar -> {
-                if (ar.succeeded())
+                if (ar.succeeded() && ar.result().size() > 0)
                 {
-                    LOG.info("✅ IP deleted: id={}", id);
-                    promise.complete();
+                    var row = ar.result().iterator().next();
+                    var data = new JsonObject().put(JsonFields.ID, row.getInteger("id"));
+                    LOG.info("IP deleted: id={}", id);
+                    promise.complete(data);
+                } else if (ar.succeeded() && ar.result().size() == 0)
+                {
+                    LOG.warn("IP not found for deletion: id={}", id);
+                    promise.fail("IP not found");
                 } else
                 {
-                    LOG.error("❌ Failed to delete IP: id={}", id, ar.cause());
+                    LOG.error("Failed to delete IP: id={}", id, ar.cause());
                     promise.fail(ar.cause());
                 }
             });
@@ -314,6 +296,110 @@ public class PostgresClient
             .put("updatedAt", row.getLocalDateTime("updated_at")
                 .toString()
             );
+    }
+
+    /**
+     * Convert database Row to JsonObject with ping status
+     *
+     * @param row SQL result row from ips_with_status view
+     * @return JsonObject with all IP fields plus latest ping status
+     */
+    private JsonObject rowToJsonWithStatus(Row row)
+    {
+        return new JsonObject()
+            .put("id", row.getInteger("id"))
+            .put("ip", row.getString("ip"))
+            .put("pollInterval", row.getInteger("poll_interval"))
+            .put("nextPollTime", row.getLocalDateTime("next_poll_time")
+                .toString()
+            )
+            .put("createdAt", row.getLocalDateTime("created_at")
+                .toString()
+            )
+            .put("updatedAt", row.getLocalDateTime("updated_at")
+                .toString()
+            )
+            .put("latestPingSuccess", row.getBoolean("latest_ping_success") != null ? row.getBoolean("latest_ping_success") : false)
+            .put("latestPacketLoss", row.getInteger("latest_packet_loss") != null ? row.getInteger("latest_packet_loss") : 100)
+            .put("latestAvgRtt", row.getDouble("latest_avg_rtt") != null ? row.getDouble("latest_avg_rtt") : -1.0)
+            .put("latestPingedAt", row.getLocalDateTime("latest_pinged_at")
+                .toString()
+            );
+    }
+
+    // =====================================================
+    // PING RESULTS Operations
+    // =====================================================
+
+    /**
+     * Get all IPs with their latest ping status
+     *
+     * @return Future with list of all IPs with ping status
+     */
+    public Future<List<JsonObject>> getAllIPsWithStatus()
+    {
+        var sql = "SELECT * FROM ips_with_status ORDER BY id ASC";
+
+        return client.query(sql)
+            .execute()
+            .map(rows -> StreamSupport.stream(rows.spliterator(), false)
+                .map(this::rowToJsonWithStatus)
+                .collect(Collectors.toList()))
+            .onSuccess(ips -> LOG.debug("Retrieved {} IPs with status", ips.size()))
+            .onFailure(err -> LOG.error("Failed to get all IPs with status", err));
+    }
+
+    /**
+     * Get a single IP by ID with latest ping status
+     *
+     * @param id IP record ID
+     * @return Future with JsonObject or null if not found
+     */
+    public Future<JsonObject> getIPByIdWithStatus(int id)
+    {
+        var sql = "SELECT * FROM ips_with_status WHERE id = $1";
+
+        return client.preparedQuery(sql)
+            .execute(Tuple.of(id))
+            .map(rows -> {
+                if (rows.size() == 0)
+                {
+                    LOG.debug("IP not found: id={}", id);
+                    return null;
+                }
+                return rowToJsonWithStatus(rows.iterator()
+                                     .next());
+            })
+            .onFailure(err -> LOG.error("Failed to get IP by id={}", id, err));
+    }
+
+    /**
+     * Store ping result for an IP
+     *
+     * @param ipId IP record ID
+     * @param ipAddress IP address string
+     * @param pingResult JsonObject containing ping result data
+     * @return Future<Void>
+     */
+    public Future<Void> storePingResult(int ipId, String ipAddress, JsonObject pingResult)
+    {
+        LOG.debug("Storing ping result: ipId={}, success={}", ipId, pingResult.getBoolean("isSuccess", false));
+
+        var sql = "INSERT INTO ping_results (ip_id, ip_address, is_success, packet_loss, min_rtt, avg_rtt, max_rtt) " +
+            "VALUES ($1, $2, $3, $4, $5, $6, $7)";
+
+        var isSuccess = pingResult.getBoolean("isSuccess", false);
+        var packetLoss = pingResult.getInteger("packetLoss", 100);
+        var minRtt = pingResult.getDouble("minRtt", -1.0);
+        var avgRtt = pingResult.getDouble("avgRtt", -1.0);
+        var maxRtt = pingResult.getDouble("maxRtt", -1.0);
+
+        return client.preparedQuery(sql)
+            .execute(Tuple.of(ipId, ipAddress, isSuccess, packetLoss, minRtt, avgRtt, maxRtt))
+            .mapEmpty()
+            .onSuccess(v -> LOG.debug("Ping result stored: ipId={}, success={}", ipId, isSuccess))
+            .onFailure(err -> LOG.error("Failed to store ping result: ipId={}", ipId, err))
+            .mapEmpty();
     }
 
 }

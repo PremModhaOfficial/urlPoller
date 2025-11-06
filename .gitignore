@@ -208,3 +208,4 @@ TEST_RESULTS.md
 urls_test_robust.txt
 .serena/
 *.log
+.mcp/chroma_data

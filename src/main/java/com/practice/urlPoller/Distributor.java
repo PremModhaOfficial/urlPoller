@@ -50,7 +50,7 @@ public class Distributor extends VerticleBase
         // Start main polling timer (queries DB every 5 seconds)
         vertx.setPeriodic(POLLING_CHECK_INTERVAL_MS, id -> pollDueIPs());
 
-        logger.info("✅ Distributor started successfully");
+        logger.info("Distributor started successfully");
         logger.info("   - Polling interval: {}s", POLLING_CHECK_INTERVAL_SEC);
         logger.info("   - Query: SELECT * FROM ips WHERE next_poll_time <= NOW()");
 
@@ -66,7 +66,7 @@ public class Distributor extends VerticleBase
         vertx.eventBus()
             .<JsonObject>localConsumer(IP_ADDED, msg -> {
                                            var body = msg.body();
-                                           logger.info("📥 New IP added: id={}, ip={}, pollInterval={}s",
+                                           logger.info("New IP added: id={}, ip={}, pollInterval={}s",
                                                        body.getInteger("id"),
                                                        body.getString("ip"),
                                                        body.getInteger("pollInterval")
@@ -77,7 +77,7 @@ public class Distributor extends VerticleBase
         vertx.eventBus()
             .<JsonObject>localConsumer(IP_UPDATED, msg -> {
                                            var body = msg.body();
-                                           logger.info("📝 IP updated: id={}, ip={}, pollInterval={}s",
+                                           logger.info("IP updated: id={}, ip={}, pollInterval={}s",
                                                        body.getInteger("id"),
                                                        body.getString("ip"),
                                                        body.getInteger("pollInterval")
@@ -88,7 +88,7 @@ public class Distributor extends VerticleBase
         vertx.eventBus()
             .<JsonObject>localConsumer(IP_DELETED, msg -> {
                                            var body = msg.body();
-                                           logger.info("🗑️  IP deleted: id={}, ip={}",
+                                           logger.info("IP deleted: id={}, ip={}",
                                                        body.getInteger("id"),
                                                        body.getString("ip")
                                            );
@@ -115,7 +115,7 @@ public class Distributor extends VerticleBase
                     return;
                 }
 
-                logger.info("⏰ Found {} IPs due for polling", ips.size());
+                logger.info("Found {} IPs due for polling", ips.size());
 
                 // Group IPs by poll interval for efficient batch processing
                 Map<Integer, Set<String>> ipsByInterval = new HashMap<>();
@@ -134,11 +134,11 @@ public class Distributor extends VerticleBase
 
                 // Execute batch ping for each interval group
                 ipsByInterval.forEach((interval, ipSet) -> {
-                    logger.debug("🔄 Batch polling {} IPs with {}s interval", ipSet.size(), interval);
+                    logger.debug("Batch polling {} IPs with {}s interval", ipSet.size(), interval);
 
                     FpingWorker.work(vertx, ipSet, interval)
                         .onSuccess(results -> {
-                            logger.debug("✅ Batch ping succeeded for {} IPs", ipSet.size());
+                            logger.debug("Batch ping succeeded for {} IPs", ipSet.size());
 
                             // Collect IPs to update (all successfully pinged IPs)
                             var toUpdate = ipSet.stream()
@@ -147,17 +147,17 @@ public class Distributor extends VerticleBase
 
                             // Batch update next_poll_time in database
                             dbClient.batchUpdateNextPollTimes(toUpdate)
-                                .onSuccess(v -> logger.debug("✅ Updated next_poll_time for {} IPs", toUpdate.size()))
-                                .onFailure(err -> logger.error("❌ Failed to update next_poll_time for {} IPs", toUpdate.size(), err));
+                                .onSuccess(v -> logger.debug("Updated next_poll_time for {} IPs", toUpdate.size()))
+                                .onFailure(err -> logger.error("Failed to update next_poll_time for {} IPs", toUpdate.size(), err));
                         })
                         .onFailure(err -> {
-                            logger.error("❌ FpingWorker failed for {} IPs with {}s interval", ipSet.size(), interval, err);
+                            logger.error("FpingWorker failed for {} IPs with {}s interval", ipSet.size(), interval, err);
                             // Note: We do NOT update next_poll_time on failure
                             // This allows retry on next polling cycle
                         });
                 });
             })
-            .onFailure(err -> logger.error("❌ Failed to query IPs due for polling", err));
+            .onFailure(err -> logger.error("Failed to query IPs due for polling", err));
     }
 
 }

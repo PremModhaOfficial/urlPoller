@@ -12,15 +12,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 
+import static com.practice.urlPoller.Constants.JsonFields.IP;
+import static com.practice.urlPoller.Constants.JsonFields.POLL_INTERVAL;
+
 public class Server
 {
 
-    private static final String MESSAGE = "message";
     private static final Logger LOG = LoggerFactory.getLogger(Server.class);
     private final Vertx vertx;
     private final int PORT;
     private final PostgresClient client;
-
 
     Server(Vertx vertx, int port)
     {
@@ -33,48 +34,54 @@ public class Server
     {
         var router = Router.router(vertx);
 
-
         router.route()
             .handler(BodyHandler.create());
-
 
         router.route()
             .handler(this::loggingHandler);
 
-
         router.get("/")
             .handler(ctx -> ctx.response()
-                .end(JsonObject.of(MESSAGE, "ok")
+                .end(ResponseBuilder.success("API is running", 200)
                          .encode()));
 
         // GET /ip - List all IPs
+        // GET /ip - List all IPs (moved to avoid duplicate)
         router.get("/ip")
             .handler(ctx -> {
-                LOG.info("GET /ip - Listing all IPs");
-                client.getAllIPs()
+                LOG.info("GET /ip - Listing all IPs with status");
+                client.getAllIPsWithStatus()
                     .onSuccess(ips -> {
-                        LOG.debug("Retrieved {} IPs", ips.size());
+                        LOG.debug("Retrieved {} IPs with status", ips.size());
                         ctx.response()
                             .putHeader("Content-Type", "application/json")
                             .setStatusCode(200)
-                            .end(new io.vertx.core.json.JsonArray(ips).encode());
+                            .end(ResponseBuilder.success("IPs retrieved successfully", new JsonArray(ips), 200)
+                                     .encode());
                     })
                     .onFailure(err -> {
-                        LOG.error("Failed to get all IPs", err);
-                        ctx.fail(500, err);
+                        LOG.error("Failed to get all IPs with status", err);
+                        ctx.response()
+                            .setStatusCode(500)
+                            .end(ResponseBuilder.error("Failed to retrieve IPs", 500)
+                                     .encode());
                     });
             });
 
         router.get("/ips")
-            .handler(ctx -> client.getAllIPs()
+            .handler(ctx -> client.getAllIPsWithStatus()
                 .onSuccess(ips -> ctx.response()
-                    .end(new JsonObject()
-                             .put("count", ips.size())
-                             .put("ips", ips)
+                    .end(ResponseBuilder.success("IPs retrieved successfully", new JsonObject()
+                            .put("count", ips.size())
+                            .put("ips", new JsonArray(ips)), 200
+                        )
                              .encode()))
                 .onFailure(t -> {
-                    LOG.error("Failed to get all IPs", t);
-                    ctx.fail(500);
+                    LOG.error("Failed to get all IPs with status", t);
+                    ctx.response()
+                        .setStatusCode(500)
+                        .end(ResponseBuilder.error("Failed to retrieve IPs", 500)
+                                 .encode());
                 }));
 
         router.delete("/ip/:id")
@@ -83,16 +90,23 @@ public class Server
                 {
                     var id = Integer.parseInt(ctx.pathParam("id"));
                     client.deleteIP(id)
-                        .onSuccess(v -> ctx.response()
-                            .end(JsonObject.of(MESSAGE, "IP deleted successfully")
+                        .onSuccess(data -> ctx.response()
+                            .setStatusCode(200)
+                            .end(ResponseBuilder.success("IP deleted successfully", data, 200)
                                      .encode()))
                         .onFailure(t -> {
                             LOG.error("Failed to delete IP: id={}", id, t);
-                            ctx.fail(500);
+                            ctx.response()
+                                .setStatusCode(500)
+                             .end(ResponseBuilder.error("Failed to delete IP", 500)
+                                          .encode());
                         });
                 } catch (NumberFormatException e)
                 {
-                    ctx.fail(400);
+                    ctx.response()
+                        .setStatusCode(400)
+                        .end(ResponseBuilder.error("Invalid ID format", 400)
+                                 .encode());
                 }
             });
         router.get("/ip/:id")
@@ -100,27 +114,34 @@ public class Server
                 try
                 {
                     var id = Integer.parseInt(ctx.pathParam("id"));
-                    client.getIPById(id)
+                    client.getIPByIdWithStatus(id)
                         .onSuccess(ip -> {
                             if (ip == null)
                             {
                                 ctx.response()
                                     .setStatusCode(404)
-                                    .end(JsonObject.of(MESSAGE, "IP not found")
+                                    .end(ResponseBuilder.error("IP not found", 404)
                                              .encode());
                             } else
                             {
                                 ctx.response()
-                                    .end(ip.encode());
+                                    .end(ResponseBuilder.success("IP retrieved successfully", ip, 200)
+                                             .encode());
                             }
                         })
                         .onFailure(t -> {
-                            LOG.error("Failed to get IP: id={}", id, t);
-                            ctx.fail(500);
+                            LOG.error("Failed to get IP with status: id={}", id, t);
+                            ctx.response()
+                                .setStatusCode(500)
+                                .end(ResponseBuilder.error("Failed to retrieve IP", 500)
+                                         .encode());
                         });
                 } catch (NumberFormatException e)
                 {
-                    ctx.fail(400);
+                    ctx.response()
+                        .setStatusCode(400)
+                        .end(ResponseBuilder.error("Invalid ID format", 400)
+                                 .encode());
                 }
             });
 
@@ -132,40 +153,36 @@ public class Server
                     var id = Integer.parseInt(ctx.pathParam("id"));
                     var body = ctx.body()
                         .asJsonObject();
-                    var ip = body.getString("ip");
-                    var pollInterval = body.getInteger("pollInterval");
+                    var ip = body.getString(IP);
+                    var pollInterval = body.getInteger(POLL_INTERVAL);
 
                     client.updateIP(id, ip, pollInterval)
-                        .onSuccess(v -> ctx.response()
-                            .end(JsonObject.of(MESSAGE, "IP updated successfully")
+                        .onSuccess(data -> ctx.response()
+                            .setStatusCode(200)
+                            .end(ResponseBuilder.success("IP updated successfully", data, 200)
                                      .encode()))
                         .onFailure(t -> {
                             LOG.error("Failed to update IP: id={}", id, t);
-                            ctx.fail(500);
+                            ctx.response()
+                                .setStatusCode(500)
+                                .end(ResponseBuilder.error("Failed to update IP", 500)
+                                         .encode());
                         });
                 } catch (NumberFormatException e)
                 {
-                    ctx.fail(400);
+                    ctx.response()
+                        .setStatusCode(400)
+                        .end(ResponseBuilder.error("Invalid ID format", 400)
+                                 .encode());
                 }
             });
 
         router.errorHandler(403, ctx -> ctx.response()
             .setStatusCode(403)
-            .end(JsonObject.of(MESSAGE, "NOT ALLOWED")
+            .end(ResponseBuilder.error("NOT ALLOWED", 403)
                      .encode())
         );
 
-        router.get("/ip")
-            .handler(ctx -> {
-                client.getAllIPs()
-                    .onSuccess(ips -> ctx.response()
-                        .putHeader("Content-Type", "application/json")
-                        .end(new JsonArray(ips).encode()))
-                    .onFailure(t -> {
-                        LOG.error("Failed to get all IPs", t);
-                        ctx.fail(500);
-                    });
-            });
 
         router.post("/ip")
             .handler(this::validateIPRequestHandler)
@@ -173,12 +190,12 @@ public class Server
                 var body = ctx.body()
                     .asJsonObject();
                 var ip = body.getString("ip");
-                var pollInterval = body.getInteger("pollInterval");
+                var pollInterval = body.getInteger(POLL_INTERVAL);
 
                 client.addIP(ip, pollInterval)
-                    .onSuccess(v -> ctx.response()
+                    .onSuccess(data -> ctx.response()
                         .setStatusCode(201)
-                        .end(JsonObject.of(MESSAGE, "IP added")
+                        .end(ResponseBuilder.success("IP added successfully", data, 201)
                                  .encode()))
                     .onFailure(t -> {
                         // Check if it's a duplicate key violation (PostgreSQL error 23505)
@@ -188,16 +205,18 @@ public class Server
                             LOG.warn("Duplicate IP attempted: {}", ip);
                             ctx.response()
                                 .setStatusCode(409)
-                                .end(JsonObject.of(MESSAGE, "IP already exists")
+                                .end(ResponseBuilder.error("IP already exists", 409)
                                          .encode());
                             return;
                         }
                         LOG.error("Failed to add IP", t);
-                        ctx.fail(500);
+                        ctx.response()
+                            .setStatusCode(500)
+                            .end(ResponseBuilder.error("Failed to add IP", 500)
+                                     .encode());
                     });
 
             });
-
 
         vertx.createHttpServer()
             .requestHandler(router)
@@ -206,7 +225,6 @@ public class Server
             .onFailure(problem -> LOG.info("server failed to start", problem.getCause()));
 
     }
-
 
     private void loggingHandler(RoutingContext ctx)
     {
@@ -220,11 +238,12 @@ public class Server
         }
 
         LOG.info("{} {} {}", ctx.request()
-            .method()
-            .toString(), ctx.request()
-                     .path(), body
+                     .method()
+                     .toString(),
+                 ctx.request()
+                     .path(),
+                 body
         );
-
 
         ctx.next();
     }
@@ -235,21 +254,22 @@ public class Server
             .asJsonObject();
         if (body == null)
         {
-            ctx.fail(400);
+            ctx.response()
+                .setStatusCode(400)
+                .end(ResponseBuilder.error("Request body is required", 400)
+                         .encode());
             return;
         }
-
         var ip = body.getString("ip");
-        var pollInterval = body.getInteger("pollInterval");
-
+        var pollInterval = body.getInteger(POLL_INTERVAL);
         if (Objects.isNull(ip) || Objects.isNull(pollInterval))
         {
-            ctx.fail(400);
+            ctx.response()
+                .setStatusCode(400)
+                .end(ResponseBuilder.error("IP and pollInterval are required", 400)
+                         .encode());
             return;
         }
-
         ctx.next();
     }
 }
-
-

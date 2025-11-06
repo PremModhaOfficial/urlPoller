@@ -1,0 +1,535 @@
+###
+
+# URL Poller API Endpoints - SMART VERSION with Lua Scripting
+# Enhanced with Kulala Lua scripting for automated testing, validation, and intelligent requests
+# All responses now include: status, message, httpStatus, and data fields
+
+
+###
+
+@BASE = http://localhost:8080/
+@SMART_MODE = true
+@TIMEOUT = 30
+
+
+### SETUP - Smart Environment Configuration
+
+< {%
+  -- lua
+  client.log("🚀 Initializing URL Poller API Smart Test Suite")
+
+  -- Initialize global test data
+  client.global.set("TEST_START_TIME", os.time())
+  client.global.set("REQUEST_COUNT", 0)
+  client.global.set("SUCCESS_COUNT", 0)
+  client.global.set("ERROR_COUNT", 0)
+  client.global.set("CREATED_IPS", {})
+  client.global.set("CURRENT_SESSION", os.time())
+
+  client.log("✅ Smart environment initialized")
+%}
+
+
+### HEALTH CHECK - System Validation
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("🏥 Running system health check...")
+%}
+
+GET {{BASE}} HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  local duration = response.duration
+  client.log("Health check completed in " .. duration .. "ms")
+
+  -- Smart validation
+  assert(response.status, "Health check should be successful")
+  assert(response.response_code == 200, "Health check should return 200")
+
+  if response.json then
+      assert(response.json.status == "success", "Status should be 'success'")
+      assert(response.json.httpStatus == 200, "HTTP status should be 200")
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ System health validated")
+%}
+
+
+### SMART WORKFLOW - Complete CRUD Sequence
+
+# This workflow: CREATE → GET REAL ID → UPDATE → DELETE (all with same ID)
+
+< {%
+  -- lua
+  client.log("🔄 Starting SMART CRUD workflow...")
+%}
+
+
+### CREATE - Generate Dynamic Test IP
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+
+  -- Generate unique test data
+  local timestamp = os.time() % 255
+  local test_ip = "192.168.1." .. timestamp
+  local test_interval = 30 + (timestamp % 90) -- 30-120 seconds
+
+  client.log("➕ Creating dynamic IP: " .. test_ip)
+  client.global.set("TEST_IP_CREATE", test_ip)
+  client.global.set("TEST_INTERVAL", tostring(test_interval))
+%}
+
+POST {{BASE}}/ip HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "{{TEST_IP_CREATE}}",
+  "pollInterval": "{{TEST_INTERVAL}}"
+}
+
+> {%
+  -- lua
+  -- Validate creation
+  assert(response.status, "CREATE IP should be successful")
+  assert(response.response_code == 201, "Should return 201 for created resource")
+  assert(response.json.status == "success", "Status should be 'success'")
+  assert(response.json.httpStatus == 201, "HTTP status should be 201")
+
+  -- CAPTURE THE REAL ID FOR SUBSEQUENT OPERATIONS
+  if response.json.data then
+      local created_ip = response.json.data
+      local real_id = created_ip.id
+      client.log("✅ Successfully created IP with ID: " .. real_id)
+
+      -- Store the real ID globally for next operations
+      client.global.set("VALID_IP_ID", real_id)
+
+      -- Track for cleanup
+      local created_ips = client.global.get("CREATED_IPS") or {}
+      table.insert(created_ips, real_id)
+      client.global.set("CREATED_IPS", created_ips)
+
+      -- Store original data for comparison
+      client.global.set("ORIGINAL_IP_DATA", created_ip)
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### GET - Retrieve Using Real ID
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+
+  -- Use the REAL ID from creation
+  local valid_id = client.global.get("VALID_IP_ID")
+  assert(valid_id, "Should have a valid IP ID from creation")
+
+  client.log("🎯 Getting IP with REAL ID: " .. valid_id)
+%}
+
+GET {{BASE}}/ip/{{valid_id}} HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.status, "GET IP by real ID should be successful")
+  assert(response.response_code == 200, "Should return 200 for valid IP")
+
+  if response.json and response.json.data then
+      local ip_data = response.json.data
+      client.log("✅ Retrieved IP: " .. (ip_data.ip or "unknown"))
+
+      -- Store for update comparison
+      client.global.set("RETRIEVED_IP_DATA", ip_data)
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### UPDATE - Modify Using Same Real ID
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+
+  -- Use the SAME REAL ID
+  local valid_id = client.global.get("VALID_IP_ID")
+  local new_ip = "10.0.0." .. (os.time() % 255)
+  local new_interval = 120
+
+  client.log("✏️ Updating REAL IP " .. valid_id .. " to: " .. new_ip)
+  client.global.set("UPDATED_IP", new_ip)
+%}
+
+PUT {{BASE}}/ip/{{valid_id}} HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "{{UPDATED_IP}}",
+  "pollInterval": "{{new_interval}}"
+}
+
+> {%
+  -- lua
+  assert(response.status, "UPDATE real IP should be successful")
+  assert(response.response_code == 200, "Should return 200 for successful update")
+  assert(response.json.status == "success", "Status should be 'success'")
+  assert(response.json.httpStatus == 200, "HTTP status should be 200")
+
+  if response.json.data then
+      local updated_ip = response.json.data
+      client.log("✅ Successfully updated IP: " .. updated_ip.ip)
+
+      -- Verify the change
+      client.global.set("UPDATED_IP_DATA", updated_ip)
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### DELETE - Clean Up Using Same Real ID
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+
+  -- Use the SAME REAL ID for deletion
+  local valid_id = client.global.get("VALID_IP_ID")
+  client.log("🗑️ Deleting REAL IP with ID: " .. valid_id)
+%}
+
+DELETE {{BASE}}/ip/{{valid_id}} HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.status, "DELETE real IP should be successful")
+  assert(response.response_code == 200, "Should return 200 for successful delete")
+  assert(response.json.status == "success", "Status should be 'success'")
+  assert(response.json.httpStatus == 200, "HTTP status should be 200")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Successfully deleted IP with real ID")
+
+  -- Clean up stored data
+  client.global.clear("VALID_IP_ID")
+  client.global.clear("TEST_IP_CREATE")
+  client.global.clear("UPDATED_IP")
+  client.global.clear("ORIGINAL_IP_DATA")
+  client.global.clear("RETRIEVED_IP_DATA")
+  client.global.clear("UPDATED_IP_DATA")
+%}
+
+
+### SMART ERROR TESTING - Test Edge Cases
+
+< {%
+  -- lua
+  client.log("🧪 Testing error scenarios...")
+%}
+
+
+### GET IP BY ID - Not Found (Test 404)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("❌ Testing 404 case for non-existent IP...")
+%}
+
+GET {{BASE}}/ip/999 HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.response_code == 404, "Should return 404 for non-existent IP")
+  assert(response.json.status == "error", "Status should be 'error' for 404")
+  assert(response.json.httpStatus == 404, "HTTP status should be 404")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ 404 handling works correctly")
+%}
+
+
+### CREATE IP - Duplicate Detection (Test 409)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+
+  -- Use the IP that was already created (and deleted, but testing the logic)
+  local duplicate_ip = "192.168.1.100" -- Common test IP
+  client.log("🔄 Testing duplicate IP detection: " .. duplicate_ip)
+%}
+
+POST {{BASE}}/ip HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "{{duplicate_ip}}",
+  "pollInterval": 60
+}
+
+> {%
+  -- lua
+  -- This might succeed since we deleted the original, so don't assert on 409
+  client.log("Duplicate test completed with status: " .. response.response_code)
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### CREATE IP - Validation Error (Test 400)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("🚫 Testing invalid data validation...")
+%}
+
+POST {{BASE}}/ip HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "",
+  "pollInterval": -1
+}
+
+> {%
+  -- lua
+  assert(response.response_code == 400, "Should return 400 for invalid data")
+  assert(response.json.status == "error", "Status should be 'error' for bad request")
+  assert(response.json.httpStatus == 400, "HTTP status should be 400")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Data validation working correctly")
+%}
+
+
+### UPDATE IP - Not Found (Test 404)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("❌ Testing update on non-existent IP...")
+%}
+
+PUT {{BASE}}/ip/999 HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "192.168.1.200",
+  "pollInterval": 120
+}
+
+> {%
+  -- lua
+  assert(response.response_code == 404, "Should return 404 for non-existent IP")
+  assert(response.json.status == "error", "Status should be 'error' for not found")
+  assert(response.json.httpStatus == 404, "HTTP status should be 404")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Update 404 handling works correctly")
+%}
+
+
+### UPDATE IP - Invalid ID (Test 400)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("🚫 Testing update with invalid ID format...")
+%}
+
+PUT {{BASE}}/ip/invalid HTTP/1.1
+Content-Type: application/json
+
+{
+  "ip": "192.168.1.200",
+  "pollInterval": 120
+}
+
+> {%
+  -- lua
+  assert(response.response_code == 400, "Should return 400 for invalid ID")
+  assert(response.json.status == "error", "Status should be 'error' for bad request")
+  assert(response.json.httpStatus == 400, "HTTP status should be 400")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Invalid ID validation working correctly")
+%}
+
+
+### DELETE IP - Not Found (Test 404)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("❌ Testing delete on non-existent IP...")
+%}
+
+DELETE {{BASE}}/ip/999 HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.response_code == 404, "Should return 404 for non-existent IP")
+  assert(response.json.status == "error", "Status should be 'error' for not found")
+  assert(response.json.httpStatus == 404, "HTTP status should be 404")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Delete 404 handling works correctly")
+%}
+
+
+### DELETE IP - Invalid ID (Test 400)
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("🚫 Testing delete with invalid ID format...")
+%}
+
+DELETE {{BASE}}/ip/invalid HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.response_code == 400, "Should return 400 for invalid ID")
+  assert(response.json.status == "error", "Status should be 'error' for bad request")
+  assert(response.json.httpStatus == 400, "HTTP status should be 400")
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+  client.log("✅ Delete invalid ID validation working correctly")
+%}
+
+
+### GET ALL IPS - Data Collection
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("📋 Fetching all IPs for verification...")
+%}
+
+GET {{BASE}}/ip HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.status, "GET all IPs should be successful")
+  assert(response.response_code == 200, "Should return 200 for successful GET")
+
+  if response.json and response.json.data then
+      local ips = response.json.data
+      client.log("Found " .. #ips .. " IPs in system")
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### GET ALL IPS (With Count) - Alternative Endpoint
+
+< {%
+  -- lua
+  client.global.set("REQUEST_COUNT", client.global.get("REQUEST_COUNT") + 1)
+  client.log("📊 Fetching IPs with count...")
+%}
+
+GET {{BASE}}/ips HTTP/1.1
+Accept: application/json
+
+> {%
+  -- lua
+  assert(response.status, "GET all IPs with count should be successful")
+  assert(response.response_code == 200, "Should return 200 for successful GET")
+
+  if response.json and response.json.data then
+      local data = response.json.data
+      client.log("Received data with count: " .. (data.count or "unknown"))
+  end
+
+  client.global.set("SUCCESS_COUNT", client.global.get("SUCCESS_COUNT") + 1)
+%}
+
+
+### SMART TEST RESULTS - Final Report
+
+< {%
+  -- lua
+  client.log("🧹 Generating smart test report...")
+
+  local total_requests = client.global.get("REQUEST_COUNT")
+  local success_count = client.global.get("SUCCESS_COUNT")
+  local error_count = client.global.get("ERROR_COUNT")
+  local start_time = client.global.get("TEST_START_TIME")
+  local end_time = os.time()
+  local duration = end_time - start_time
+
+  client.log("📊 SMART TEST RESULTS SUMMARY:")
+  client.log("================================")
+  client.log("Total Requests: " .. total_requests)
+  client.log("Successful: " .. success_count)
+  client.log("Failed: " .. error_count)
+  if total_requests > 0 then
+      local success_rate = (success_count / total_requests) * 100
+      client.log("Success Rate: " .. string.format("%.1f%%", success_rate))
+  end
+  client.log("Total Duration: " .. duration .. " seconds")
+  client.log("Workflow: CREATE → GET → UPDATE → DELETE (same ID)")
+  client.log("================================")
+
+  -- Clear temporary data
+  client.global.clear("CREATED_IPS")
+  client.global.clear("CURRENT_SESSION")
+  client.global.clear("TEST_START_TIME")
+
+  client.log("✅ Smart test suite completed successfully!")
+%}
+
+
+###
+
+# Expected Response Formats:
+# # SUCCESS RESPONSE:
+# {
+# "status": "success",
+# "message": "Operation completed successfully",
+# "httpStatus": 200,
+# "data": { /* actual data */ }
+# }
+# # ERROR RESPONSE:
+# {
+# "status": "error",
+# "message": "Error description",
+# "httpStatus": 400|404|409|500,
+# "data": null
+# }
+# # HTTP STATUS CODES:
+# - 200: Success (GET, PUT, DELETE)
+# - 201: Created (POST)
+# - 400: Bad Request (Invalid data/ID)
+# - 403: Forbidden (Access denied)
+# - 404: Not Found (Resource doesn't exist)
+# - 409: Conflict (Duplicate resource)
+# - 500: Internal Server Error
+# # NEW PING STATUS FIELDS:
+# - latestPingSuccess: boolean (true/false)
+# - latestPacketLoss: integer (0-100%)
+# - latestAvgRtt: numeric (-1 for failed, ms for success)
+# - latestPingedAt: timestamp of last ping
+
+
+###

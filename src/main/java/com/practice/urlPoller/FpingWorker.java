@@ -307,7 +307,7 @@ public class FpingWorker
       }
     } catch (IOException ioException)
     {
-      System.err.println(ERROR_READING_FPING_OUTPUT);
+      logger.error(ERROR_READING_FPING_OUTPUT);
       //      ioException.printStackTrace();
     }
 
